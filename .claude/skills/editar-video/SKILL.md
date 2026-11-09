@@ -40,6 +40,7 @@ Leia antes:
 - Pedidos de ajuste viram uma nova versão, nunca uma edição em cima da anterior.
 - Correção que vale para outros vídeos vira uma linha em `aprendizados.md`. Gosto aprovado vai para `estilos/<canal>.md`, e preferência pessoal para `.memoria/MEMORIA.md`.
 - Para a pessoa ajustar sozinha, ofereça o editor: `scripts/editor.sh`.
+- Final aprovado: ofereça liberar espaço com `scripts/limpar.py`. Rode a simulação primeiro, pergunte quais categorias limpar e mande para a Lixeira.
 
 ## Downloads e instalações
 

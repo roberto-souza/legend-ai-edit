@@ -35,3 +35,11 @@ Entrada: o EDL do rascunho aprovado (`trabalho/rascunho_vNN.edl.json`). Os corte
      - `nome`: nome na tela, animado no HyperFrames (`motion/nome`), no formato "Nome | função";
    - Tudo isso aparece no inspetor do editor.
 9. Depois da aprovação, o render final sai do mesmo EDL e da mesma configuração, com `--source bruto`: 4K com o LUT, gerando `final/<pasta>_vNN.mp4`.
+
+## Depois do final aprovado: liberar espaço
+
+`.venv/bin/python scripts/limpar.py videos/<pasta> --versoes --proxies --motion` mostra o que pode sair e quanto ocupa. Com `--aplicar`, manda para a Lixeira do macOS, de onde dá para recuperar até ela ser esvaziada.
+
+- Sai: as versões antigas (rascunhos, prévias e finais anteriores), os proxies e o cache de motion.
+- Fica sempre: `bruto/`, `assets/`, os textos de `trabalho/` e o final mais recente.
+- Sempre pergunte antes quais categorias limpar. Os brutos são mídia da pessoa: só ela decide se apaga, depois de ter cópia em outro lugar.

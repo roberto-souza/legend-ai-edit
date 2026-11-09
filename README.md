@@ -187,6 +187,7 @@ Os renders saem em ProRes 4444 com transparência e ficam em cache por texto. Ve
 | A transcrição baixa o modelo de novo | importe `lae` antes de `mlx_whisper`, porque é ele que aponta o `HF_HOME` para `.cache/` |
 | O título animado não renderiza | o modelo carrega o GSAP pela internet (CDN); confira a conexão e rode `npx hyperframes check` dentro de `motion/titulo` |
 | O editor não abre | `scripts/editor.sh` sobe o servidor na porta 8765; se ela estiver ocupada, use `PORT=8766 scripts/editor.sh` |
+| A pasta do vídeo ficou enorme | depois do final aprovado, `scripts/limpar.py videos/<pasta> --versoes --proxies --motion` mostra o que pode sair; com `--aplicar`, manda para a Lixeira (o bruto e o final nunca saem) |
 | A legenda erra uma palavra | peça ao Claude para anotar em `trabalho/correcoes_legenda.json`; a transcrição original não muda |
 
 ## Créditos
