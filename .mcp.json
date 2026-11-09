@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "epidemic-sound": {
+      "type": "http",
+      "url": "https://www.epidemicsound.com/a/mcp-service/listed/mcp"
+    }
+  }
+}

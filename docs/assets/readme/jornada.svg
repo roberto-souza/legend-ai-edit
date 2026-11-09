@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" role="img" aria-labelledby="t d">
+  <title id="t">A jornada de um vídeo</title>
+  <desc id="d">Mapa em pergaminho com uma trilha tracejada que liga cinco marcos: 1 Preparação, com proxies, LUT e transcrição; 2 Plano de corte em texto; 3 Rascunho a partir dos proxies; 4 Acabamento com legenda, motions, trilha e loudness; 5 Final em 4K a partir dos brutos. Embaixo, o editor de linha do tempo para os ajustes à mão.</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6ecd2"/>
+      <stop offset="1" stop-color="#e6d3a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="380" rx="14" fill="url(#paper)"/>
+  <rect x="10" y="10" width="1180" height="360" rx="10" fill="none" stroke="#7a1f2b" stroke-width="2" stroke-dasharray="2 6"/>
+  <text x="600" y="54" text-anchor="middle" font-family="Georgia, serif" font-size="30" font-weight="700" fill="#5e1520">A jornada de um vídeo</text>
+
+  <path d="M130 180 C 230 100, 300 260, 365 180 S 520 100, 600 180 S 760 260, 840 180 S 1000 100, 1070 180" fill="none" stroke="#3b2a1a" stroke-width="3" stroke-dasharray="10 9" opacity=".6"/>
+
+  <g font-family="Georgia, serif" text-anchor="middle">
+    <g transform="translate(130 180)">
+      <circle r="44" fill="#7a1f2b" stroke="#c9a227" stroke-width="5"/>
+      <rect x="-20" y="-16" width="40" height="30" rx="4" fill="none" stroke="#f1d27a" stroke-width="4"/>
+      <path d="M20 -6 l12 -7 v20 l-12 -7" fill="#f1d27a"/>
+      <text y="80" font-size="22" font-weight="700" fill="#3b2a1a">1 · Preparação</text>
+      <text y="104" font-size="15" fill="#5e1520">proxies, LUT, transcrição</text>
+    </g>
+    <g transform="translate(365 180)">
+      <circle r="44" fill="#7a1f2b" stroke="#c9a227" stroke-width="5"/>
+      <rect x="-18" y="-22" width="36" height="44" rx="3" fill="#f3e7c9"/>
+      <g stroke="#7a1f2b" stroke-width="2.5"><line x1="-10" y1="-10" x2="10" y2="-10"/><line x1="-10" y1="0" x2="10" y2="0"/><line x1="-10" y1="10" x2="4" y2="10"/></g>
+      <text y="80" font-size="22" font-weight="700" fill="#3b2a1a">2 · Plano de corte</text>
+      <text y="104" font-size="15" fill="#5e1520">o texto decide, o script mede</text>
+    </g>
+    <g transform="translate(600 180)">
+      <circle r="44" fill="#7a1f2b" stroke="#c9a227" stroke-width="5"/>
+      <g fill="#f1d27a"><rect x="-22" y="-14" width="12" height="28" rx="2"/><rect x="-6" y="-14" width="12" height="28" rx="2"/><rect x="10" y="-14" width="12" height="28" rx="2"/></g>
+      <text y="80" font-size="22" font-weight="700" fill="#3b2a1a">3 · Rascunho</text>
+      <text y="104" font-size="15" fill="#5e1520">cortes no quadro exato</text>
+    </g>
+    <g transform="translate(840 180)">
+      <circle r="44" fill="#7a1f2b" stroke="#c9a227" stroke-width="5"/>
+      <path d="M0 -22 l6 14 l15 2 l-11 10 l3 15 l-13 -7 l-13 7 l3 -15 l-11 -10 l15 -2 z" fill="#f1d27a"/>
+      <text y="80" font-size="22" font-weight="700" fill="#3b2a1a">4 · Acabamento</text>
+      <text y="104" font-size="15" fill="#5e1520">legenda, motions, trilha</text>
+    </g>
+    <g transform="translate(1070 180)">
+      <circle r="44" fill="#7a1f2b" stroke="#c9a227" stroke-width="5"/>
+      <path d="M-18 16 v-20 l8 6 l10 -14 l10 14 l8 -6 v20 z" fill="#f1d27a"/>
+      <text y="80" font-size="22" font-weight="700" fill="#3b2a1a">5 · Final 4K</text>
+      <text y="104" font-size="15" fill="#5e1520">dos brutos, -14 LUFS</text>
+    </g>
+  </g>
+
+  <g font-family="Georgia, serif">
+    <rect x="300" y="318" width="600" height="38" rx="19" fill="#5e1520" stroke="#c9a227" stroke-width="2"/>
+    <text x="600" y="343" text-anchor="middle" font-size="16" fill="#f3e7c9">✎ ajustes à mão no editor de linha do tempo · cada etapa espera o seu "sim"</text>
+  </g>
+</svg>

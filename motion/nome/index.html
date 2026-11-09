@@ -1,0 +1,64 @@
+<!doctype html>
+<!--
+  Nome na tela do Legend AI Edit (sobreposição com transparência).
+  Embaixo, à esquerda, acima da legenda: barra amarela + nome + função, no mesmo desenho do título.
+  Duração: 120 quadros a 29,97 fps -> (120 - 0,5) / 29,97 = 3.987 s.
+  Variáveis: nome, funcao. Render: scripts/motion.py.
+-->
+<html lang="pt-BR" data-resolution="landscape" data-composition-variables='[
+  {"id":"nome","type":"string","label":"Nome","default":"Nome"},
+  {"id":"funcao","type":"string","label":"Função (opcional)","default":"Função"}
+]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root { --ink: #ffffff; --accent: #f5b942; --shadow: rgba(0, 0, 0, 0.55); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+      /* bottom-left, above the caption line (captions sit ~8% from the bottom) */
+      #block { position: absolute; left: 96px; bottom: 210px; display: flex; gap: 18px; align-items: stretch; }
+      #bar { width: 8px; border-radius: 4px; background: var(--accent); box-shadow: 0 2px 10px var(--shadow); }
+      #text { display: flex; flex-direction: column; gap: 4px; }
+      .m { display: block; overflow: hidden; padding: 0.12em 0.1em 0.14em; margin: -0.12em -0.1em -0.14em; }
+      #nome span { display: inline-block; color: var(--ink); font-size: 52px; font-weight: 800; letter-spacing: -0.01em;
+                   line-height: 1.15; text-shadow: 0 3px 12px var(--shadow), 0 1px 2px rgba(0,0,0,.6); }
+      #funcao span { display: inline-block; color: var(--accent); font-size: 30px; font-weight: 700; letter-spacing: 0.02em;
+                     line-height: 1.2; text-shadow: 0 2px 8px var(--shadow); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="3.987" data-width="1920" data-height="1080"
+         data-motion-blur="on" data-motion-blur-tier="filter">
+      <div id="block" class="clip" data-start="0" data-duration="3.987" data-track-index="0">
+        <div id="bar"></div>
+        <div id="text">
+          <div id="nome" class="m"><span></span></div>
+          <div id="funcao" class="m"><span></span></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const { nome, funcao } = window.__hyperframes.getVariables();
+      const nomeEl = document.querySelector("#nome span");
+      const funcaoEl = document.querySelector("#funcao span");
+      nomeEl.textContent = nome || "";
+      funcaoEl.textContent = funcao || "";
+      if (!funcao) document.querySelector("#funcao").style.display = "none";
+      const tl = gsap.timeline({ paused: true });
+      tl.set("#bar", { transformOrigin: "50% 100%" }, 0);
+      tl.fromTo("#bar", { scaleY: 0 }, { scaleY: 1, duration: 0.3, ease: "power3.out", lazy: false }, 0);
+      tl.fromTo(nomeEl, { xPercent: -105 }, { xPercent: 0, duration: 0.42, ease: "power4.out", lazy: false }, 0.1);
+      tl.fromTo(funcaoEl, { yPercent: 115 }, { yPercent: 0, duration: 0.34, ease: "power3.out", lazy: false }, 0.26);
+      const out = 3.987 - 0.4;
+      tl.fromTo([funcaoEl], { yPercent: 0 }, { yPercent: 115, duration: 0.22, ease: "power3.in", immediateRender: false, lazy: false }, out);
+      tl.fromTo([nomeEl], { xPercent: 0 }, { xPercent: -105, duration: 0.26, ease: "power3.in", immediateRender: false, lazy: false }, out + 0.06);
+      tl.set("#bar", { transformOrigin: "50% 0%" }, out + 0.16);
+      tl.fromTo("#bar", { scaleY: 1 }, { scaleY: 0, duration: 0.22, ease: "power3.in", immediateRender: false, lazy: false }, out + 0.16);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

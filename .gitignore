@@ -1,0 +1,21 @@
+# vídeos e todo o trabalho de edição ficam só na máquina de cada pessoa
+videos/*
+!videos/.gitkeep
+.historico/
+.venv/
+luts/*.cube
+sfx/**/*.wav
+sfx/**/*.mp3
+*.mov
+*.MOV
+*.mp4
+*.MP4
+*.wav
+.DS_Store
+.cache/
+.memoria/
+CLAUDE.local.md
+node_modules/
+motion/out/
+motion/*/.hyperframes/
+motion/*/renders/

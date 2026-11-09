@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linha do tempo · Legend AI Edit</title>
+<style>
+  :root {
+    --bg: #141416; --panel: #1c1c20; --panel2: #232328; --line: #2e2e35; --text: #e8e8ec;
+    --muted: #8b8b96; --accent: #22d3c5; --accent2: #f5b942; --danger: #f2545b; --sel: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; overflow: hidden; }
+  button, select, input { font: inherit; color: inherit; }
+  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: #4a4a55; }
+  button.primary { background: var(--accent); color: #062b28; border-color: transparent; font-weight: 600; }
+  button.warn { background: var(--accent2); color: #2d2000; border-color: transparent; font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+  .app { display: grid; grid-template-rows: 46px minmax(0, 1fr) 300px; height: 100vh; }
+  header { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0; }
+  header > * { flex: none; }
+  header h1 { font-size: 14px; margin: 0 8px 0 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+  #versions { max-width: 200px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 4px; }
+  header .spacer { flex: 1 1 0; min-width: 0; }
+  header .spacer { flex: 1; }
+  #status { color: var(--muted); flex: 0 1 420px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #status.err { color: var(--danger); }
+  #status a { color: var(--accent); }
+  .main { display: grid; grid-template-columns: 200px minmax(0, 1fr) 270px; min-height: 0; }
+  @media (max-width: 1100px) { .main { grid-template-columns: 0 minmax(0, 1fr) 250px; } .main > .side:first-child { display: none; }
+    header h1 { display: none; } }
+  .side { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 10px; }
+  .side.right { border-right: 0; border-left: 1px solid var(--line); }
+  .side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 4px 0 8px; }
+  .clip { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 6px; cursor: default; }
+  .clip:hover { background: var(--panel2); }
+  .clip .sw { width: 10px; height: 26px; border-radius: 3px; flex: none; }
+  .clip .meta { flex: 1; min-width: 0; }
+  .clip .meta b { display: block; }
+  .clip .meta span { color: var(--muted); font-size: 11px; }
+  .clip button { padding: 2px 8px; }
+  .stage-wrap { display: flex; flex-direction: column; min-height: 0; padding: 10px; gap: 8px; }
+  .stage { position: relative; flex: 1; min-height: 0; background: #000; border-radius: 8px; overflow: hidden; }
+  .stage .frame { position: absolute; inset: 0; margin: auto; aspect-ratio: 16 / 9; max-width: 100%; max-height: 100%; overflow: hidden; background: #000; }
+  .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transform-origin: 50% 50%; }
+  .stage video.hidden { visibility: hidden; }
+  #vO { z-index: 2; }
+  #cap { position: absolute; left: 10%; right: 10%; bottom: 8%; z-index: 3; text-align: center; font-weight: 700;
+    font-size: clamp(14px, 2.6vw, 30px); text-shadow: 0 0 4px #000, 0 0 2px #000, 0 2px 3px #000; pointer-events: none; }
+  #lbl { position: absolute; left: 5%; top: 7%; z-index: 3; font-weight: 800; color: #f5b942; transform: rotate(-4deg);
+    font-size: clamp(16px, 3.4vw, 40px); text-shadow: 0 0 4px #000, 0 2px 3px #000; pointer-events: none; }
+  .transport { display: flex; align-items: center; gap: 8px; justify-content: center; }
+  #tc { font-variant-numeric: tabular-nums; min-width: 190px; text-align: center; color: var(--muted); }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+  .field input[type=number], .field select { width: 100%; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .check { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+  .quote { background: var(--panel2); border-radius: 6px; padding: 8px; color: #cfcfd6; max-height: 140px; overflow: auto; }
+  .help { color: var(--muted); font-size: 11px; line-height: 1.6; }
+  .help kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font: 11px ui-monospace, monospace; }
+  .tl { display: grid; grid-template-rows: 30px minmax(0, 1fr); border-top: 1px solid var(--line); background: var(--panel); min-height: 0; }
+  .tl-bar { display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .tl-scroll { position: relative; overflow-x: auto; overflow-y: hidden; }
+  .tl-inner { position: relative; height: 100%; min-width: 100%; }
+  .labels { position: absolute; left: 0; top: 0; bottom: 0; width: 64px; z-index: 6; background: var(--panel); border-right: 1px solid var(--line); }
+  .labels div { position: absolute; left: 8px; color: var(--muted); font-size: 11px; }
+  .ruler { position: absolute; left: 64px; top: 0; height: 24px; right: 0; cursor: pointer; border-bottom: 1px solid var(--line); }
+  .tick { position: absolute; top: 0; height: 100%; border-left: 1px solid #3a3a42; padding-left: 3px; font-size: 10px; color: var(--muted); }
+  .track { position: absolute; left: 64px; right: 0; }
+  .blk { position: absolute; top: 0; bottom: 0; border-radius: 5px; overflow: hidden; cursor: grab; border: 1px solid rgba(0,0,0,.35);
+    font-size: 11px; padding: 3px 7px; color: #0d0d10; user-select: none; }
+  .blk .t1 { font-weight: 700; white-space: nowrap; }
+  .blk .t2 { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blk.sel { outline: 2px solid var(--sel); outline-offset: -1px; z-index: 2; }
+  .blk .h { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; background: rgba(0,0,0,.18); }
+  .blk .h.l { left: 0; } .blk .h.r { right: 0; }
+  .blk .badge { position: absolute; right: 9px; top: 3px; font-size: 10px; font-weight: 700; background: rgba(0,0,0,.35); color: #fff; border-radius: 3px; padding: 0 4px; }
+  .blk.broll { background-image: repeating-linear-gradient(135deg, rgba(0,0,0,.12) 0 6px, transparent 6px 12px); }
+  .blk.apo { background: #a78bfa; }
+  .blk.aud { background: #3b82f6; color: #fff; cursor: default; }
+  .mark { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--accent2); border-radius: 2px; }
+  .mark span { position: absolute; left: 6px; top: 2px; white-space: nowrap; font-size: 10px; color: var(--accent2); }
+  #ph { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--danger); z-index: 5; pointer-events: none; }
+  #ph::before { content: ""; position: absolute; top: 0; left: -5px; border: 6px solid transparent; border-top-color: var(--danger); }
+  #drop { position: absolute; width: 3px; background: var(--accent); z-index: 7; display: none; }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="title">Linha do tempo</h1>
+    <button id="undo" title="Desfazer (⌘Z)">↶</button>
+    <button id="redo" title="Refazer (⇧⌘Z)">↷</button>
+    <select id="versions" title="Versão carregada"></select>
+    <div class="spacer"></div>
+    <span id="status"></span>
+    <button id="save" class="primary" title="Salvar (⌘S)">Salvar</button>
+    <button id="renderPreview">Renderizar prévia</button>
+    <button id="renderFinal" class="warn">Renderizar 4K</button>
+  </header>
+
+  <div class="main">
+    <aside class="side">
+      <h2>Clipes</h2>
+      <div id="library"></div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div class="stage"><div class="frame">
+        <video id="vA" playsinline preload="auto"></video>
+        <video id="vB" playsinline preload="auto" class="hidden"></video>
+        <video id="vO" playsinline muted preload="auto" class="hidden"></video>
+        <div id="cap"></div><div id="lbl"></div>
+      </div></div>
+      <div class="transport">
+        <button id="prev" title="Corte anterior (↑)">⏮</button>
+        <button id="play" title="Tocar/pausar (espaço)">▶</button>
+        <button id="next" title="Próximo corte (↓)">⏭</button>
+        <span id="tc">00:00:00 / 00:00:00</span>
+      </div>
+      <audio id="aM" preload="auto"></audio>
+    </section>
+
+    <aside class="side right" id="inspector"></aside>
+  </div>
+
+  <section class="tl">
+    <div class="tl-bar">
+      <span>Zoom da linha do tempo</span>
+      <input id="scale" type="range" min="0.6" max="12" step="0.1" value="2.2">
+      <span id="count"></span>
+    </div>
+    <div class="tl-scroll" id="scroll">
+      <div class="tl-inner" id="inner">
+        <div class="labels"><div style="top:30px">Apoio</div><div style="top:76px">Vídeo</div><div style="top:170px">Áudio</div></div>
+        <div class="ruler" id="ruler"></div>
+        <div class="track" id="tApo" style="top:30px;height:36px"></div>
+        <div class="track" id="tVid" style="top:74px;height:84px"></div>
+        <div class="track" id="tAud" style="top:168px;height:30px"></div>
+        <div id="ph"></div>
+        <div id="drop"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let P = null, FPS = 30, pieces = [], apoio = [], sel = null, T = 0, playing = false, dirty = false;
+let undoStack = [], redoStack = [], nextId = 1, loadedFrom = "";
+let active = $("vA"), standby = $("vB"), curIdx = -1, standbyIdx = -1;
+const LEAD = 64; // px of the track labels
+
+// ---------- helpers ----------
+const clipNo = (f) => (f.match(/_(\d{4})_/) || [, f])[1];
+const hue = (f) => (parseInt(clipNo(f), 10) * 47) % 360;
+const color = (f) => `hsl(${hue(f)} 62% 66%)`;
+const pxf = () => parseFloat($("scale").value) / 10; // px per frame
+function tc(fr) {
+  fr = Math.max(0, Math.round(fr));
+  const f = fr % Math.round(FPS), s = Math.floor(fr / FPS);
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}:${String(f).padStart(2, "0")}`;
+}
+function starts() { const out = []; let pos = 0; for (const p of pieces) { out.push(pos); pos += p.out_frame - p.in_frame; } return out; }
+function total() { return pieces.reduce((a, p) => a + p.out_frame - p.in_frame, 0); }
+function pieceAt(t) {
+  const st = starts();
+  for (let i = 0; i < pieces.length; i++) if (t < st[i] + pieces[i].out_frame - pieces[i].in_frame) return i;
+  return pieces.length - 1;
+}
+function textOf(p) {
+  const w = P.words[p.clip] || [], a = p.in_frame / FPS, b = p.out_frame / FPS;
+  return w.filter((x) => x[1] > a + 0.05 && x[0] < b - 0.05).map((x) => x[2]).join(" ");
+}
+function apoioAt(a) { const st = starts(), i = pieces.findIndex((p) => p.id === a.piece); return i < 0 ? null : st[i] + a.offset; }
+function anchor(name) {
+  // same anchors as scripts/finish.py
+  const st = starts(), end = (i) => st[i] + pieces[i].out_frame - pieces[i].in_frame;
+  if (name === "inicio") return 0;
+  if (name === "fim") return total();
+  if (name === "efeito") { const i = pieces.findIndex((p) => p.efeito); return i < 0 ? null : st[i]; }
+  if (name === "fim_efeito") { let i = -1; pieces.forEach((p, j) => { if (p.efeito) i = j; }); return i < 0 ? null : end(i); }
+  if (name === "broll") { const i = pieces.findIndex((p) => p.broll); return i < 0 ? null : st[i]; }
+  if (name.startsWith("trecho:")) {
+    const txt = name.slice(7).trim().toLowerCase(), span = P.spans.findIndex((s) => s.toLowerCase().startsWith(txt));
+    const i = pieces.findIndex((p) => p.span === span); return i < 0 ? null : st[i];
+  }
+  return null;
+}
+function setStatus(msg, err = false) { const s = $("status"); s.innerHTML = msg; s.className = err ? "err" : ""; }
+function markDirty() { dirty = true; $("save").textContent = "Salvar •"; }
+
+// ---------- history ----------
+const snap = () => JSON.stringify({ pieces, apoio });
+function push() { undoStack.push(snap()); if (undoStack.length > 200) undoStack.shift(); redoStack = []; markDirty(); }
+function restore(s) { const o = JSON.parse(s); pieces = o.pieces; apoio = o.apoio; render(); seek(Math.min(T, total() - 1)); markDirty(); }
+function undo() { if (!undoStack.length) return; redoStack.push(snap()); restore(undoStack.pop()); }
+function redo() { if (!redoStack.length) return; undoStack.push(snap()); restore(redoStack.pop()); }
+
+// ---------- load ----------
+async function load(name = "") {
+  const r = await fetch("/api/project" + (name ? "?timeline=" + encodeURIComponent(name) : ""));
+  P = await r.json();
+  const [n, d] = P.rate.split("/").map(Number); FPS = n / (d || 1);
+  nextId = 1;
+  pieces = P.pieces.map((p) => ({ id: nextId++, span: p.span ?? null, clip: p.clip, vertical: !!p.vertical,
+    broll: !!p.broll, efeito: !!p.efeito, in_frame: p.in_frame, out_frame: p.out_frame, zoom: p.zoom ?? 1, rotulo: p.rotulo || "",
+    zoom_fim: p.zoom_fim ?? null, transicao: p.transicao || "", titulo: p.titulo || "", nome: p.nome || "" }));
+  const st = starts();
+  apoio = P.apoio.map((a) => {
+    let i = st.findIndex((s, k) => a.at_frame >= s && a.at_frame < s + pieces[k].out_frame - pieces[k].in_frame);
+    if (i < 0) i = 0;
+    return { id: nextId++, clip: a.clip, piece: pieces[i].id, offset: a.at_frame - st[i], frames: a.frames };
+  });
+  loadedFrom = P.loaded_from; undoStack = []; redoStack = []; dirty = false; $("save").textContent = "Salvar";
+  $("title").textContent = "Linha do tempo · " + P.video;
+  const vs = $("versions"); vs.innerHTML = "";
+  for (const v of [P.loaded_from.startsWith("timeline_") ? null : P.loaded_from, ...P.timelines].filter(Boolean)) {
+    const o = document.createElement("option"); o.value = v; o.textContent = v; o.selected = v === P.loaded_from; vs.append(o);
+  }
+  if (P.config.musica?.[0]) $("aM").src = P.config.musica[0].url;
+  library(); render(); seek(0); setStatus("Carregado: " + P.loaded_from);
+}
+
+function library() {
+  const box = $("library"); box.innerHTML = "";
+  for (const [f, c] of Object.entries(P.clips)) {
+    const div = document.createElement("div"); div.className = "clip";
+    const vert = c.height > c.width ? " · vertical" : "";
+    div.innerHTML = `<div class="sw" style="background:${color(f)}"></div><div class="meta"><b>${clipNo(f)}</b>` +
+      `<span>${c.duration_s.toFixed(1)} s${vert}</span></div><button title="Inserir depois do corte selecionado">+</button>`;
+    div.querySelector("button").onclick = () => insertClip(f);
+    box.append(div);
+  }
+}
+
+function insertClip(f) {
+  push();
+  const c = P.clips[f], len = Math.min(c.frames, Math.round(5 * FPS));
+  const p = { id: nextId++, span: null, clip: f, vertical: c.height > c.width, broll: false, efeito: false,
+    in_frame: Math.floor((c.frames - len) / 2), out_frame: Math.floor((c.frames - len) / 2) + len, zoom: 1 };
+  const i = sel?.type === "piece" ? pieces.findIndex((x) => x.id === sel.id) + 1 : pieces.length;
+  pieces.splice(i, 0, p); sel = { type: "piece", id: p.id }; render(); seek(starts()[i]);
+}
+
+// ---------- timeline render ----------
+function render() {
+  const k = pxf(), st = starts(), tot = total();
+  $("inner").style.width = (LEAD + tot * k + 400) + "px";
+  // ruler
+  const ruler = $("ruler"); ruler.innerHTML = "";
+  const stepS = k * FPS > 60 ? 1 : k * FPS > 18 ? 5 : 10;
+  for (let s = 0; s * FPS <= tot; s += stepS) {
+    const t = document.createElement("div"); t.className = "tick"; t.style.left = (s * FPS * k) + "px";
+    t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; ruler.append(t);
+  }
+  // video track
+  const tv = $("tVid"); tv.innerHTML = "";
+  pieces.forEach((p, i) => {
+    const b = document.createElement("div"), len = p.out_frame - p.in_frame;
+    b.className = "blk" + (p.broll ? " broll" : "") + (sel?.type === "piece" && sel.id === p.id ? " sel" : "");
+    b.style.left = (st[i] * k) + "px"; b.style.width = Math.max(3, len * k - 1) + "px";
+    b.style.background = p.efeito ? `linear-gradient(90deg, hsl(${hue(p.clip)} 0% 70%), hsl(${hue(p.clip)} 0% 55%))` : color(p.clip);
+    const flags = [p.zoom > 1 ? p.zoom.toFixed(2) + "×" : "", p.vertical ? "▯" : "", p.broll ? "sem som" : "", p.efeito ? "glitch P&B" : "", p.rotulo ? "“" + p.rotulo + "”" : "", p.zoom_fim ? "↗" + p.zoom_fim.toFixed(2) : "", p.transicao ? "⇥" + p.transicao : "",
+      p.titulo ? "T" : "", p.nome ? "N" : ""].filter(Boolean).join(" · ");
+    b.innerHTML = `<div class="t1">${clipNo(p.clip)} <span style="font-weight:400">${(len / FPS).toFixed(1)}s</span></div>` +
+      `<div class="t2">${p.broll ? "[b-roll]" : (textOf(p) || "—")}</div>` + (flags ? `<span class="badge">${flags}</span>` : "") +
+      `<div class="h l"></div><div class="h r"></div>`;
+    b.title = textOf(p);
+    b.onpointerdown = (e) => blockDown(e, p, i);
+    tv.append(b);
+  });
+  // apoio track
+  const ta = $("tApo"); ta.innerHTML = "";
+  for (const a of apoio) {
+    const at = apoioAt(a); if (at === null) continue;
+    const b = document.createElement("div");
+    b.className = "blk apo" + (sel?.type === "apoio" && sel.id === a.id ? " sel" : "");
+    b.style.left = (at * k) + "px"; b.style.width = Math.max(3, a.frames * k - 1) + "px";
+    b.innerHTML = `<div class="t1">apoio ${clipNo(a.clip)}</div>`;
+    b.onpointerdown = (e) => apoioDown(e, a);
+    ta.append(b);
+  }
+  // audio track (read only: anchors from the finishing config)
+  const tu = $("tAud"); tu.innerHTML = "";
+  const cfg = P.config;
+  for (const m of cfg.musica || []) {
+    const i = pieces.findIndex((p) => p.broll); if (i < 0) continue;
+    let j = i, len = 0; while (j < pieces.length && pieces[j].broll) { len += pieces[j].out_frame - pieces[j].in_frame; j++; }
+    const b = document.createElement("div"); b.className = "blk aud";
+    b.style.left = (st[i] * k) + "px"; b.style.width = ((len + (m.fade_out_s ?? 1.5) * FPS) * k) + "px";
+    b.innerHTML = `<div class="t1">♪ ${m.arquivo.split("/").pop().replace(/^es_|\.mp3$/g, "")}</div>`;
+    b.title = "Música: fica sob a sequência de b-roll (configuração do acabamento)";
+    tu.append(b);
+  }
+  for (const part of cfg.trilha?.partes || []) {
+    const a = anchor(part.de), b = anchor(part.ate); if (a === null || b === null || b <= a) continue;
+    const blk = document.createElement("div"); blk.className = "blk aud"; blk.style.opacity = ".75";
+    blk.style.left = (a * k) + "px"; blk.style.width = ((b - a) * k - 1) + "px";
+    blk.innerHTML = `<div class="t1">♫ ${part.arquivo.split("/").pop().replace(/^es_|\.mp3$/g, "")} (fundo)</div>`;
+    blk.title = "Trilha de fundo: abaixa sozinha quando há fala (configuração do acabamento)";
+    tu.append(blk);
+  }
+  for (const x of cfg.sfx || []) {
+    const at = anchor(x.em);
+    if (at === null) continue;
+    const m = document.createElement("div"); m.className = "mark";
+    m.style.left = ((at - (x.antes_s || 0) * FPS) * k) + "px";
+    m.innerHTML = `<span>${x.arquivo.includes("glitch") ? "glitch" : x.arquivo.includes("whoosh") ? "whoosh" : "sfx"}</span>`;
+    tu.append(m);
+  }
+  $("count").textContent = `${pieces.length} cortes · ${tc(tot)} (${(tot / FPS / 60).toFixed(2)} min)`;
+  placePlayhead(); inspector();
+}
+
+function placePlayhead() {
+  $("ph").style.left = (LEAD + T * pxf()) + "px";
+  $("tc").textContent = `${tc(T)} / ${tc(total())}`;
+}
+
+// ---------- pointer editing ----------
+function blockDown(e, p, i) {
+  e.preventDefault(); stop();
+  sel = { type: "piece", id: p.id };
+  const k = pxf(), x0 = e.clientX, mode = e.target.classList.contains("l") ? "l" : e.target.classList.contains("r") ? "r" : "move";
+  const orig = { a: p.in_frame, b: p.out_frame }, before = snap(), max = P.clips[p.clip].frames;
+  let moved = false, target = i;
+  const onMove = (ev) => {
+    const d = Math.round((ev.clientX - x0) / k);
+    if (Math.abs(ev.clientX - x0) > 3) moved = true;
+    if (mode === "l") { p.in_frame = Math.min(Math.max(0, orig.a + d), p.out_frame - 2); render(); seek(starts()[i]); }
+    else if (mode === "r") { p.out_frame = Math.max(Math.min(max, orig.b + d), p.in_frame + 2); render(); seek(starts()[i] + p.out_frame - p.in_frame - 1); }
+    else if (moved) {
+      const st = starts(), x = (ev.clientX - $("tVid").getBoundingClientRect().left) / k;
+      target = pieces.length;
+      for (let j = 0; j < pieces.length; j++) if (x < st[j] + (pieces[j].out_frame - pieces[j].in_frame) / 2) { target = j; break; }
+      const dp = $("drop"), ref = target < pieces.length ? st[target] : total();
+      dp.style.display = "block"; dp.style.left = (LEAD + ref * k - 1) + "px"; dp.style.top = "74px"; dp.style.height = "84px";
+    }
+  };
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp);
+    $("drop").style.display = "none";
+    if (mode === "move" && moved && target !== i && target !== i + 1) {
+      const [x] = pieces.splice(i, 1); pieces.splice(target > i ? target - 1 : target, 0, x);
+    }
+    if (moved) { undoStack.push(before); redoStack = []; markDirty(); }
+    else seek(starts()[i] + Math.max(0, Math.round((x0 - e.currentTarget?.getBoundingClientRect?.().left || 0) / k)));
+    render();
+  };
+  window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp);
+  render();
+}
+
+function apoioDown(e, a) {
+  e.preventDefault(); stop(); sel = { type: "apoio", id: a.id };
+  const k = pxf(), x0 = e.clientX, at0 = apoioAt(a), before = snap(); let moved = false;
+  const onMove = (ev) => {
+    const d = Math.round((ev.clientX - x0) / k); if (Math.abs(d) > 0) moved = true;
+    const at = Math.max(0, Math.min(total() - 1, at0 + d)), i = pieceAt(at);
+    a.piece = pieces[i].id; a.offset = at - starts()[i]; render();
+  };
+  const onUp = () => {
+    window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp);
+    if (moved) { undoStack.push(before); redoStack = []; markDirty(); }
+    seek(apoioAt(a)); render();
+  };
+  window.addEventListener("pointermove", onMove); window.addEventListener("pointerup", onUp); render();
+}
+
+function seekFromEvent(ev) {
+  const x = ev.clientX - $("ruler").getBoundingClientRect().left;
+  seek(Math.max(0, Math.min(total() - 1, Math.round(x / pxf()))));
+}
+$("ruler").onpointerdown = (e) => {
+  stop(); seekFromEvent(e);
+  const mv = (ev) => seekFromEvent(ev), up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
+  window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+};
+$("scale").oninput = () => render();
+
+// ---------- inspector ----------
+function inspector() {
+  const box = $("inspector");
+  const help = `<div class="help" style="margin-top:14px"><kbd>espaço</kbd> tocar · <kbd>←</kbd><kbd>→</kbd> 1 quadro (<kbd>⇧</kbd> 10) ·
+    <kbd>S</kbd> dividir no cursor · <kbd>Q</kbd>/<kbd>W</kbd> cortar início/fim até o cursor · <kbd>Z</kbd> zoom ·
+    <kbd>⌫</kbd> apagar · <kbd>D</kbd> duplicar · <kbd>⌘Z</kbd> desfazer · <kbd>⌘S</kbd> salvar.<br>
+    Arraste o meio do bloco para mudar a ordem e as bordas para cortar.</div>`;
+  if (sel?.type === "piece") {
+    const p = pieces.find((x) => x.id === sel.id); if (!p) { box.innerHTML = help; return; }
+    const max = P.clips[p.clip].frames;
+    box.innerHTML = `<h2>Corte · ${clipNo(p.clip)}</h2>
+      <div class="field"><label>Arquivo</label>${p.clip}</div>
+      <div class="row"><div class="field"><label>Entrada (quadro)</label><input id="iIn" type="number" min="0" max="${max}" value="${p.in_frame}"></div>
+      <div class="field"><label>Saída (quadro)</label><input id="iOut" type="number" min="0" max="${max}" value="${p.out_frame}"></div></div>
+      <div class="field"><label>Entrada · saída · duração</label>${tc(p.in_frame)} · ${tc(p.out_frame)} · ${((p.out_frame - p.in_frame) / FPS).toFixed(2)} s</div>
+      <div class="field"><label>Zoom</label><select id="iZoom">${[1, 1.06, 1.1, 1.12, 1.15].map((z) => `<option value="${z}" ${Math.abs(p.zoom - z) < 1e-3 ? "selected" : ""}>${z === 1 ? "sem zoom" : z.toFixed(2) + "×"}</option>`).join("")}</select></div>
+      <label class="check"><input id="iBroll" type="checkbox" ${p.broll ? "checked" : ""}> Sem som (b-roll, a música cobre)</label>
+      <label class="check"><input id="iFx" type="checkbox" ${p.efeito ? "checked" : ""}> Glitch + preto e branco</label>
+      <div class="field" style="margin-top:8px"><label>Texto na tela (amarelo, canto de cima)</label><input id="iLbl" type="text" maxlength="80" value="${(p.rotulo || "").replace(/"/g, "&quot;")}" placeholder="ex.: TENTATIVA 2" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
+      <div class="row"><div class="field"><label>Zoom final (avanço suave)</label><select id="iZf">${[["", "sem avanço"], ...[0.03, 0.05, 0.08].map((d) => [(p.zoom + d).toFixed(2), "+" + d.toFixed(2) + "×"])].map(([v, t]) => `<option value="${v}" ${(p.zoom_fim ? p.zoom_fim.toFixed(2) : "") === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div class="field"><label>Transição de entrada</label><select id="iTr">${[["", "corte seco"], ["flash", "flash"], ["punch", "punch-in"], ["fade", "fade"]].map(([v, t]) => `<option value="${v}" ${p.transicao === v ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+      <div class="field"><label>Título (centro, com pop)</label><input id="iTit" type="text" maxlength="80" value="${(p.titulo || "").replace(/"/g, "&quot;")}" placeholder="ex.: TARDE DE GRAVAÇÃO" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
+      <div class="field"><label>Nome na tela (embaixo, desliza)</label><input id="iNome" type="text" maxlength="80" value="${(p.nome || "").replace(/"/g, "&quot;")}" placeholder="ex.: Gui | Social media" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
+      <div class="field" style="margin-top:10px"><label>Fala neste corte</label><div class="quote">${textOf(p) || "<i>sem fala</i>"}</div></div>
+      <div class="row"><button id="bSplit">Dividir (S)</button><button id="bDup">Duplicar (D)</button><button id="bDel" style="color:var(--danger)">Apagar</button></div>` + help;
+    const upd = (fn) => { push(); fn(); render(); };
+    $("iIn").onchange = (e) => upd(() => { p.in_frame = Math.max(0, Math.min(+e.target.value, p.out_frame - 2)); });
+    $("iOut").onchange = (e) => upd(() => { p.out_frame = Math.min(max, Math.max(+e.target.value, p.in_frame + 2)); });
+    $("iZoom").onchange = (e) => upd(() => { p.zoom = +e.target.value; });
+    $("iBroll").onchange = (e) => upd(() => { p.broll = e.target.checked; });
+    $("iFx").onchange = (e) => upd(() => { p.efeito = e.target.checked; });
+    $("iLbl").onchange = (e) => upd(() => { p.rotulo = e.target.value.trim(); });
+    $("iZf").onchange = (e) => upd(() => { p.zoom_fim = e.target.value ? +e.target.value : null; });
+    $("iTr").onchange = (e) => upd(() => { p.transicao = e.target.value; });
+    $("iTit").onchange = (e) => upd(() => { p.titulo = e.target.value.trim(); });
+    $("iNome").onchange = (e) => upd(() => { p.nome = e.target.value.trim(); });
+    $("bSplit").onclick = split; $("bDup").onclick = dup; $("bDel").onclick = del;
+  } else if (sel?.type === "apoio") {
+    const a = apoio.find((x) => x.id === sel.id); if (!a) { box.innerHTML = help; return; }
+    box.innerHTML = `<h2>Apoio · ${clipNo(a.clip)}</h2>
+      <div class="field"><label>Começa em</label>${tc(apoioAt(a))}</div>
+      <div class="field"><label>Duração (quadros)</label><input id="aLen" type="number" min="2" max="${P.clips[a.clip].frames}" value="${a.frames}"></div>
+      <p class="help">Só a imagem do clipe entra por cima; o som continua o do corte de baixo. Arraste o bloco roxo para mudar o ponto de entrada.</p>
+      <button id="aDel" style="color:var(--danger)">Apagar apoio</button>` + help;
+    $("aLen").onchange = (e) => { push(); a.frames = Math.max(2, Math.min(P.clips[a.clip].frames, +e.target.value)); render(); };
+    $("aDel").onclick = del;
+  } else {
+    box.innerHTML = `<h2>Ajustes</h2><p class="help">Clique num bloco da linha do tempo para editar. Os clipes da esquerda entram com <b>+</b> depois do corte selecionado.</p>` + help;
+  }
+}
+
+function selPiece() { return sel?.type === "piece" ? pieces.findIndex((x) => x.id === sel.id) : -1; }
+function split() {
+  const i = pieceAt(T), st = starts()[i], p = pieces[i], cut = p.in_frame + Math.round(T - st);
+  if (cut <= p.in_frame + 1 || cut >= p.out_frame - 1) return setStatus("Ponha o cursor dentro do corte para dividir.", true);
+  push();
+  const q = { ...p, id: nextId++, in_frame: cut, efeito: p.efeito };
+  p.out_frame = cut; pieces.splice(i + 1, 0, q); sel = { type: "piece", id: q.id }; render();
+}
+function dup() { const i = selPiece(); if (i < 0) return; push(); const q = { ...pieces[i], id: nextId++ }; pieces.splice(i + 1, 0, q); sel = { type: "piece", id: q.id }; render(); }
+function del() {
+  if (sel?.type === "apoio") { push(); apoio = apoio.filter((a) => a.id !== sel.id); sel = null; render(); return; }
+  const i = selPiece(); if (i < 0 || pieces.length < 2) return;
+  push(); const gone = pieces[i].id; pieces.splice(i, 1);
+  apoio = apoio.filter((a) => a.piece !== gone);
+  sel = pieces[i] ? { type: "piece", id: pieces[i].id } : null; render(); seek(Math.min(T, total() - 1));
+}
+function trimTo(side) {
+  const i = pieceAt(T), st = starts()[i], p = pieces[i], at = p.in_frame + Math.round(T - st);
+  push();
+  if (side === "q") { if (at > p.in_frame && at < p.out_frame - 1) p.in_frame = at; seek(st); }
+  else { if (at > p.in_frame + 1) p.out_frame = at; }
+  sel = { type: "piece", id: p.id }; render();
+}
+
+// ---------- playback ----------
+function styleVideo(v, p) {
+  v.style.transform = p.zoom > 1 ? `scale(${p.zoom})` : "";
+  v.style.filter = p.efeito ? "grayscale(1)" : "";
+  v.muted = !!p.broll;
+}
+function loadInto(v, i, offset) {
+  const p = pieces[i], url = P.clips[p.clip].url, t = (p.in_frame + offset) / FPS + 0.001;
+  if (!v.src.endsWith(url)) v.src = url;
+  const go = () => { v.currentTime = t; };
+  if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true });
+  styleVideo(v, p);
+}
+function seek(t) {
+  T = Math.max(0, Math.min(Math.round(t), Math.max(0, total() - 1)));
+  curIdx = pieceAt(T); const st = starts();
+  loadInto(active, curIdx, T - st[curIdx]);
+  if (curIdx + 1 < pieces.length) { loadInto(standby, curIdx + 1, 0); standbyIdx = curIdx + 1; } else standbyIdx = -1;
+  overlays(); placePlayhead(); scrollToPlayhead();
+}
+function scrollToPlayhead() {
+  const sc = $("scroll"), x = LEAD + T * pxf();
+  if (x < sc.scrollLeft + LEAD || x > sc.scrollLeft + sc.clientWidth - 40) sc.scrollLeft = x - sc.clientWidth / 3;
+}
+function overlays() {
+  // apoio picture
+  const vO = $("vO"); let shown = false;
+  for (const a of apoio) {
+    const at = apoioAt(a);
+    if (at !== null && T >= at && T < at + a.frames) {
+      shown = true; const url = P.clips[a.clip].url, want = (T - at) / FPS;
+      if (!vO.src.endsWith(url)) vO.src = url;
+      if (vO.classList.contains("hidden") || Math.abs(vO.currentTime - want) > 0.25) vO.currentTime = want;
+      vO.classList.remove("hidden"); if (playing && vO.paused) vO.play().catch(() => {});
+    }
+  }
+  if (!shown) { vO.classList.add("hidden"); vO.pause(); }
+  // music under the b-roll run
+  const aM = $("aM"), m = P.config.musica?.[0], i = pieces.findIndex((p) => p.broll);
+  if (m && i >= 0) {
+    let j = i, len = 0; while (j < pieces.length && pieces[j].broll) { len += pieces[j].out_frame - pieces[j].in_frame; j++; }
+    const a = starts()[i], b = a + len + (m.fade_out_s ?? 1.5) * FPS;
+    if (playing && T >= a && T < b) {
+      const want = (m.inicio_faixa_s || 0) + (T - a) / FPS;
+      if (aM.paused || Math.abs(aM.currentTime - want) > 0.3) { aM.currentTime = want; aM.play().catch(() => {}); }
+      aM.volume = 0.45;
+    } else if (!aM.paused) aM.pause();
+  }
+  // caption preview (words around the current source time)
+  const p = pieces[curIdx];
+  $("lbl").textContent = p?.rotulo || "";
+  if (p && !p.broll) {
+    const t = (p.in_frame + (T - starts()[curIdx])) / FPS, w = P.words[p.clip] || [];
+    const k = w.findIndex((x) => x[1] > t - 0.05 && x[0] <= t + 0.05);
+    $("cap").textContent = k < 0 ? "" : w.slice(Math.max(0, k - 1), k + 3).filter((x) => x[0] < p.out_frame / FPS && x[1] > p.in_frame / FPS).map((x) => x[2]).join(" ");
+  } else $("cap").textContent = "";
+}
+function play() {
+  if (!pieces.length) return;
+  if (T >= total() - 1) seek(0);
+  playing = true; $("play").textContent = "❚❚";
+  active.classList.remove("hidden"); standby.classList.add("hidden");
+  active.play().catch(() => {}); requestAnimationFrame(tick);
+}
+function stop() {
+  if (!playing) return;
+  playing = false; $("play").textContent = "▶"; active.pause(); $("vO").pause(); $("aM").pause();
+}
+function tick() {
+  if (!playing) return;
+  const p = pieces[curIdx], st = starts()[curIdx];
+  const cur = active.currentTime * FPS - p.in_frame;
+  T = st + Math.max(0, cur);
+  if (active.currentTime * FPS >= p.out_frame - 0.5 || active.ended) {
+    if (curIdx + 1 >= pieces.length) { stop(); T = total() - 1; placePlayhead(); return; }
+    // swap to the preloaded standby video
+    [active, standby] = [standby, active];
+    curIdx = curIdx + 1; T = starts()[curIdx];
+    if (standbyIdx !== curIdx) loadInto(active, curIdx, 0);
+    styleVideo(active, pieces[curIdx]);
+    active.classList.remove("hidden"); standby.classList.add("hidden"); standby.pause();
+    active.play().catch(() => {});
+    if (curIdx + 1 < pieces.length) { loadInto(standby, curIdx + 1, 0); standbyIdx = curIdx + 1; }
+  }
+  overlays(); placePlayhead(); scrollToPlayhead();
+  requestAnimationFrame(tick);
+}
+$("play").onclick = () => (playing ? stop() : play());
+$("prev").onclick = () => { stop(); const i = pieceAt(T), st = starts(); seek(T - st[i] > 3 ? st[i] : st[Math.max(0, i - 1)]); };
+$("next").onclick = () => { stop(); const i = pieceAt(T); if (i + 1 < pieces.length) seek(starts()[i + 1]); };
+
+// ---------- keyboard ----------
+window.addEventListener("keydown", (e) => {
+  if (e.target.matches?.("input, select")) return;
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); save(); return; }
+  if (mod) return;
+  const k = e.key.toLowerCase();
+  if (e.key === " ") { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === "ArrowLeft") { stop(); seek(T - (e.shiftKey ? 10 : 1)); }
+  else if (e.key === "ArrowRight") { stop(); seek(T + (e.shiftKey ? 10 : 1)); }
+  else if (e.key === "ArrowUp") $("prev").onclick();
+  else if (e.key === "ArrowDown") $("next").onclick();
+  else if (k === "s") { stop(); split(); }
+  else if (k === "q") { stop(); trimTo("q"); }
+  else if (k === "w") { stop(); trimTo("w"); }
+  else if (k === "d") dup();
+  else if (k === "z") { const i = selPiece() >= 0 ? selPiece() : pieceAt(T); const p = pieces[i]; push();
+    const steps = [1, 1.06, 1.12, 1.15]; p.zoom = steps[(steps.findIndex((z) => Math.abs(z - p.zoom) < 1e-3) + 1) % steps.length];
+    sel = { type: "piece", id: p.id }; render(); seek(T); }
+  else if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); del(); }
+});
+$("undo").onclick = undo; $("redo").onclick = redo;
+
+// ---------- save & render ----------
+async function save() {
+  const st = starts();
+  const body = {
+    based_on: loadedFrom,
+    pieces: pieces.map(({ id, ...p }) => ({ ...p, efeito: p.efeito ? "glitch_pb" : undefined, rotulo: p.rotulo || undefined,
+      titulo: p.titulo || undefined, nome: p.nome || undefined, transicao: p.transicao || undefined, zoom_fim: p.zoom_fim || undefined })),
+    apoio: apoio.map((a) => ({ clip: a.clip, at_frame: apoioAt(a), frames: a.frames })).filter((a) => a.at_frame !== null),
+  };
+  const r = await fetch("/api/save", { method: "POST", body: JSON.stringify(body) });
+  const out = await r.json();
+  if (!r.ok) { setStatus("Erro ao salvar: " + out.error, true); return null; }
+  dirty = false; $("save").textContent = "Salvar"; loadedFrom = out.saved;
+  const o = document.createElement("option"); o.value = o.textContent = out.saved; o.selected = true; $("versions").append(o);
+  setStatus("Salvo em trabalho/" + out.saved);
+  return out.saved;
+}
+async function renderTimeline(source) {
+  let name = loadedFrom;
+  if (dirty || !name.startsWith("timeline_")) { name = await save(); if (!name) return; }
+  if (source === "bruto" && !confirm("Renderizar em 4K a partir dos brutos? Leva alguns minutos.")) return;
+  const r = await fetch("/api/render", { method: "POST", body: JSON.stringify({ timeline: name, source }) });
+  const out = await r.json();
+  if (!r.ok) { setStatus(out.error, true); return; }
+  $("renderPreview").disabled = $("renderFinal").disabled = true;
+  const poll = async () => {
+    const s = await (await fetch("/api/render")).json();
+    const last = (s.log || []).slice(-1)[0] || "";
+    if (s.running) { setStatus("Renderizando " + (source === "bruto" ? "4K" : "prévia") + "… " + last.replace(/\s+/g, " ").slice(0, 90)); setTimeout(poll, 1000); return; }
+    $("renderPreview").disabled = $("renderFinal").disabled = false;
+    if (s.error) setStatus(s.error + " · " + last, true);
+    else if (s.output) { const f = s.output.split("/").pop(); setStatus(`Pronto: <a href="/media/final/${encodeURIComponent(f)}" target="_blank">${f}</a>`); }
+  };
+  poll();
+}
+$("save").onclick = save;
+$("renderPreview").onclick = () => renderTimeline("proxies");
+$("renderFinal").onclick = () => renderTimeline("bruto");
+$("versions").onchange = (e) => {
+  if (dirty && !confirm("Há mudanças não salvas. Carregar outra versão mesmo assim?")) { e.target.value = loadedFrom; return; }
+  stop(); load(e.target.value.startsWith("timeline_") ? e.target.value : "");
+};
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+load().catch((e) => { document.body.innerHTML = `<div class="empty">Não consegui carregar o projeto: ${e}</div>`; });
+</script>
+</body>
+</html>

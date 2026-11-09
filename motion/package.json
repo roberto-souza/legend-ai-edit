@@ -1,0 +1,12 @@
+{
+  "name": "legend-ai-edit-motion",
+  "private": true,
+  "description": "Motion graphics do Legend AI Edit (HyperFrames: HTML/CSS/GSAP -> vídeo)",
+  "type": "module",
+  "scripts": {
+    "hf": "hyperframes"
+  },
+  "dependencies": {
+    "hyperframes": "0.9.26"
+  }
+}

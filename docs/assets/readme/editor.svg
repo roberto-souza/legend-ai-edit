@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" role="img" aria-labelledby="t d">
+  <title id="t">O editor de linha do tempo</title>
+  <desc id="d">Esboço do editor no navegador: player no centro, biblioteca de clipes à esquerda, inspetor à direita e, embaixo, as trilhas de apoio, vídeo e áudio com os cortes coloridos e o cursor vermelho.</desc>
+  <rect width="1200" height="340" rx="14" fill="#141416"/>
+  <rect x="10" y="10" width="1180" height="320" rx="10" fill="none" stroke="#c9a227" stroke-opacity=".5" stroke-width="2"/>
+  <g font-family="-apple-system, 'Helvetica Neue', sans-serif">
+    <rect x="30" y="30" width="1140" height="30" rx="6" fill="#1c1c20"/>
+    <text x="46" y="51" font-size="14" font-weight="700" fill="#e8e8ec">Linha do tempo</text>
+    <rect x="890" y="36" width="70" height="18" rx="5" fill="#22d3c5"/><text x="925" y="49" font-size="11" text-anchor="middle" fill="#062b28">Salvar</text>
+    <rect x="968" y="36" width="96" height="18" rx="5" fill="#232328"/><text x="1016" y="49" font-size="11" text-anchor="middle" fill="#e8e8ec">Prévia</text>
+    <rect x="1072" y="36" width="88" height="18" rx="5" fill="#f5b942"/><text x="1116" y="49" font-size="11" text-anchor="middle" fill="#2d2000">4K</text>
+
+    <rect x="30" y="70" width="170" height="140" rx="6" fill="#1c1c20"/>
+    <g fill="#8b8b96" font-size="11"><text x="42" y="90">CLIPES</text></g>
+    <g><rect x="42" y="100" width="8" height="18" rx="2" fill="#e9a07a"/><rect x="42" y="126" width="8" height="18" rx="2" fill="#a3d977"/><rect x="42" y="152" width="8" height="18" rx="2" fill="#7ac6e9"/><rect x="42" y="178" width="8" height="18" rx="2" fill="#c79be8"/></g>
+    <g fill="#e8e8ec" font-size="12"><text x="58" y="113">0010</text><text x="58" y="139">0014</text><text x="58" y="165">0019</text><text x="58" y="191">0021 · vertical</text></g>
+
+    <rect x="212" y="70" width="700" height="140" rx="6" fill="#000"/>
+    <rect x="360" y="78" width="404" height="124" fill="#2b2b33"/>
+    <rect x="380" y="92" width="6" height="34" rx="3" fill="#f5b942"/>
+    <text x="394" y="104" font-size="10" fill="#f5b942" font-weight="700">Vlog do Palanque</text>
+    <text x="394" y="124" font-size="18" fill="#fff" font-weight="800">TARDE DE GRAVAÇÃO</text>
+    <text x="562" y="190" font-size="13" text-anchor="middle" fill="#fff" font-weight="700">Dia de <tspan fill="#f5b942">gravação</tspan> do Palanque</text>
+
+    <rect x="924" y="70" width="246" height="140" rx="6" fill="#1c1c20"/>
+    <g fill="#8b8b96" font-size="11"><text x="938" y="90">CORTE · 0021</text><text x="938" y="112">Zoom</text><text x="938" y="140">Transição</text><text x="938" y="168">Título</text></g>
+    <g fill="#232328"><rect x="1010" y="100" width="146" height="18" rx="4"/><rect x="1010" y="128" width="146" height="18" rx="4"/><rect x="1010" y="156" width="146" height="18" rx="4"/></g>
+    <g fill="#e8e8ec" font-size="11"><text x="1018" y="113">1,12× → 1,16×</text><text x="1018" y="141">punch-in</text><text x="1018" y="169">TARDE DE GRAVAÇÃO</text></g>
+
+    <rect x="30" y="222" width="1140" height="96" rx="6" fill="#1c1c20"/>
+    <g fill="#8b8b96" font-size="10"><text x="40" y="244">Apoio</text><text x="40" y="276">Vídeo</text><text x="40" y="306">Áudio</text></g>
+    <rect x="300" y="232" width="60" height="18" rx="4" fill="#a78bfa"/>
+    <g>
+      <rect x="90" y="258" width="70" height="30" rx="4" fill="#a3d977"/><rect x="162" y="258" width="120" height="30" rx="4" fill="#7ac6e9"/>
+      <rect x="284" y="258" width="90" height="30" rx="4" fill="#e9a07a"/><rect x="376" y="258" width="150" height="30" rx="4" fill="#9a9aa0"/>
+      <rect x="528" y="258" width="110" height="30" rx="4" fill="#c79be8"/><rect x="640" y="258" width="200" height="30" rx="4" fill="#7ae9c8"/>
+      <rect x="842" y="258" width="60" height="30" rx="4" fill="#e97a9a"/><rect x="904" y="258" width="70" height="30" rx="4" fill="#e9d27a"/>
+      <rect x="976" y="258" width="180" height="30" rx="4" fill="#7a9ae9"/>
+    </g>
+    <rect x="90" y="296" width="284" height="16" rx="4" fill="#3b82f6" opacity=".75"/>
+    <rect x="528" y="296" width="628" height="16" rx="4" fill="#3b82f6" opacity=".75"/>
+    <rect x="374" y="294" width="3" height="20" fill="#f5b942"/>
+    <rect x="700" y="226" width="2" height="90" fill="#f2545b"/>
+  </g>
+</svg>
