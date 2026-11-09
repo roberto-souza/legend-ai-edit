@@ -93,7 +93,8 @@ def validate(body: dict, clips: dict) -> list[dict]:
                        **({"titulo": str(p["titulo"])[:80]} if p.get("titulo") else {}),
                        **({"nome": str(p["nome"])[:80]} if p.get("nome") else {}),
                        **({"transicao": p["transicao"]} if p.get("transicao") in ("flash", "punch", "fade") else {}),
-                       **({"zoom_fim": float(p["zoom_fim"])} if p.get("zoom_fim") else {})})
+                       **({"zoom_fim": float(p["zoom_fim"])} if p.get("zoom_fim") else {}),
+                       **({"velocidade": float(p["velocidade"])} if p.get("broll") and float(p.get("velocidade") or 1) > 1 else {})})
     return pieces
 
 

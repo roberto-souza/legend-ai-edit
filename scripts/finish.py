@@ -129,11 +129,23 @@ def assign_zoom(pieces: list[dict], zoom_max: float) -> None:
         prev = p
 
 
+def speed(p: dict) -> float:
+    """Playback speed of a piece: only b-roll can be sped up (timelapse); speech always plays at 1x."""
+    v = float(p.get("velocidade") or 1)
+    return v if p.get("broll") and v > 1 else 1.0
+
+
+def tl_length(p: dict) -> int:
+    """Frames a piece occupies on the timeline (after any speed-up)."""
+    n = p["out_frame"] - p["in_frame"]
+    return n if speed(p) == 1 else max(1, -(-n * 1000 // round(speed(p) * 1000)))
+
+
 def piece_starts(pieces: list[dict]) -> list[int]:
     pos, out = 0, []
     for p in pieces:
         out.append(pos)
-        pos += p["out_frame"] - p["in_frame"]
+        pos += tl_length(p)
     return out
 
 
@@ -141,10 +153,10 @@ def resolve_anchor(anchor: str, pieces, starts, spans) -> int:
     if anchor == "inicio":
         return 0
     if anchor == "fim":
-        return starts[-1] + pieces[-1]["out_frame"] - pieces[-1]["in_frame"]
+        return starts[-1] + tl_length(pieces[-1])
     if anchor == "fim_efeito":
         last = max(i for i, p in enumerate(pieces) if p.get("efeito"))
-        return starts[last] + pieces[last]["out_frame"] - pieces[last]["in_frame"]
+        return starts[last] + tl_length(pieces[last])
     if anchor == "efeito":
         return next(s for p, s in zip(pieces, starts) if p.get("efeito"))
     if anchor == "broll":
@@ -260,12 +272,12 @@ def captions(vdir: Path, pieces, starts, rate: Fraction, w: int, h: int, spans: 
         t1 = lae.frame_to_seconds(p["out_frame"], rate)
         off = float(lae.frame_to_seconds(start, rate) - t0)
         if p.get("rotulo"):
-            a, b = float(t0) + off, float(t1) + off
+            a, b = float(lae.frame_to_seconds(start, rate)), float(lae.frame_to_seconds(start + tl_length(p), rate))
             if labels and labels[-1][2] == p["rotulo"] and abs(labels[-1][1] - a) < 0.05:
                 labels[-1] = (labels[-1][0], b, p["rotulo"])   # one label across the pieces of a take
             else:
                 labels.append((a, b, p["rotulo"]))
-        a_p, b_p = float(t0) + off, float(t1) + off
+        a_p, b_p = float(lae.frame_to_seconds(start, rate)), float(lae.frame_to_seconds(start + tl_length(p), rate))
         if p.get("titulo"):
             titles.append((a_p, min(b_p, a_p + 3.0), p["titulo"]))
         if p.get("nome"):
@@ -423,7 +435,7 @@ def main() -> None:
                 p["zoom_fim"] = round(p["zoom"] + push, 3)
     assign_voice_gain(pieces, rate, lambda c: vdir / "trabalho" / "proxies" / (Path(c).stem + "_proxy.mp4"))
     starts = piece_starts(pieces)
-    total = starts[-1] + pieces[-1]["out_frame"] - pieces[-1]["in_frame"]
+    total = starts[-1] + tl_length(pieces[-1])
     total_s = float(lae.frame_to_seconds(total, rate))
     color = f"lut3d=file='{lut}':interp=tetrahedral," if final and lut else ""
 
@@ -445,11 +457,17 @@ def main() -> None:
         dur = float(lae.frame_to_seconds(b - a, rate))
         fx = f",{glitch_pb_filter(w // 1920)}" if p.get("efeito") == "glitch_pb" else ""
         rgb = "format=rgb48le," if final else ""
-        graph.append(f"[{k}:v]trim=start_frame={a}:end_frame={b},setpts=PTS-STARTPTS,{rgb}{color}"
-                     f"{fit(p['vertical'], w, h, f'p{k}', p['zoom'], p.get('zoom_fim'), b - a)}"
+        n_out = tl_length(p)
+        # timelapse: speed up and drop frames back to the timeline rate *before* the LUT and scaling,
+        # so only the frames that stay get processed
+        fast = (f",setpts=(PTS-STARTPTS)/{speed(p)},fps={rate.numerator}/{rate.denominator},trim=end_frame={n_out}"
+                if speed(p) > 1 else "")
+        graph.append(f"[{k}:v]trim=start_frame={a}:end_frame={b},setpts=PTS-STARTPTS{fast},{rgb}{color}"
+                     f"{fit(p['vertical'], w, h, f'p{k}', p['zoom'], p.get('zoom_fim'), n_out)}"
                      f"{transition_filter(p.get('transicao'), w, h)}{fx}[v{k}]")
         if p.get("broll"):
-            graph.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=end_sample={s1 - s0}[a{k}]")
+            silent = round(lae.frame_to_seconds(n_out, rate) * SAMPLE_RATE)
+            graph.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=end_sample={silent}[a{k}]")
         else:
             graph.append(f"[{k}:a]aresample={SAMPLE_RATE},atrim=start_sample={s0}:end_sample={s1},asetpts=PTS-STARTPTS,"
                          f"afade=t=in:d={FADE},afade=t=out:st={max(0.0, dur - FADE):.4f}:d={FADE},"
@@ -535,7 +553,7 @@ def main() -> None:
         run = 0
         for p, s in zip(pieces, starts):
             if p.get("broll") and s >= at and s == at + run:
-                run += p["out_frame"] - p["in_frame"]
+                run += tl_length(p)
         length = float(lae.frame_to_seconds(run, rate)) + m.get("fade_out_s", 1.5)
         at_s = float(lae.frame_to_seconds(at, rate))
         cmd += ["-ss", str(m.get("inicio_faixa_s", 0)), "-i", str(vdir / m["arquivo"])]

@@ -30,6 +30,7 @@ Entrada: o EDL do rascunho aprovado (`trabalho/rascunho_vNN.edl.json`). Os corte
      - `nomes_proprios`: grafia fixa na legenda (ex.: `["Palanque", "CTG"]`).
    - **Por corte, na linha do tempo:**
      - `zoom_fim`: avanço suave até esse zoom;
+     - `velocidade`: só em b-roll; acelera o trecho em timelapse (ex.: 40), e a duração na linha do tempo vira a duração acelerada;
      - `transicao`: `flash`, `punch` ou `fade`;
      - `titulo`: título animado do HyperFrames no alto (`docs/etapas/motion.md`);
      - `nome`: nome na tela, animado no HyperFrames (`motion/nome`), no formato "Nome | função";

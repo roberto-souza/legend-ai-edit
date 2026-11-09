@@ -116,8 +116,14 @@ def split_span(span: dict, gaps, short_gaps) -> list[tuple[Fraction, Fraction]]:
 
 
 def next_version(folder: Path, pattern: str) -> str:
+    """Next free version. Renders in final/ may have been cleaned up (scripts/limpar.py), so the
+    records kept in the sibling trabalho/ folder (.edl.json, .ass) count as taken too."""
+    stem = Path(pattern).stem
+    work = folder.parent / "trabalho"
     n = 1
-    while any(folder.glob(pattern.format(v=f"v{n:02d}"))):
+    while (any(folder.glob(pattern.format(v=f"v{n:02d}")))
+           or any(work.glob(stem.format(v=f"v{n:02d}") + ".*"))
+           or any(work.glob(stem.replace(f"{folder.parent.name}_", "", 1).format(v=f"v{n:02d}") + ".edl.json"))):
         n += 1
     return f"v{n:02d}"
 

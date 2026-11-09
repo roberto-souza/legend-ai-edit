@@ -17,3 +17,4 @@
 - Títulos de bloco: animação do HyperFrames no terço de cima, à esquerda, com selo "Vlog do Palanque" (sem "·" separando) e barra amarela, e whoosh bem leve na entrada. Nunca texto grande no meio da tela.
 - Motions leves: zoom suave nos cortes longos, punch-in ou flash para marcar mudança de bloco e palavra falada em amarelo na legenda.
 - Nomes próprios na legenda (`nomes_proprios` na configuração de acabamento): Palanque, CTG, CTGs, MTG, Gui, Grêmio.
+- Timelapse: b-roll longo de trabalho (câmera fixa) entra acelerado, de 6 a 8 s, sem fala e só com a trilha, para dar ritmo entre blocos. Cortar o começo e o fim em que a pessoa dá o play e o stop.

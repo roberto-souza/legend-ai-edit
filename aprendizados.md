@@ -7,3 +7,4 @@ Correções que valem para outros vídeos. Formato: `- [ ] <etapa> · <pedido> �
 - [ ] acabamento · legenda menor e com menos borda · 2026-11-09
 - [ ] acabamento · legenda não pode puxar palavra do take vizinho nem ter maiúscula no meio · 2026-11-09
 - [ ] acabamento · título grande no meio da tela ficou feio; títulos no alto e animados no HyperFrames · 2026-11-09
+- [ ] preparação · clipe descartado pelo áudio pode ser b-roll bom: olhar a imagem antes de descartar · 2026-11-09

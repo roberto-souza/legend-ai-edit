@@ -50,7 +50,9 @@ def main() -> None:
     ap.add_argument("--lut", required=True)
     ap.add_argument("--height", type=int, default=1080)
     ap.add_argument("--bitrate", default="10M")
+    ap.add_argument("--clips", default="", help="only these clip numbers, e.g. 0009,0010 (default: all)")
     args = ap.parse_args()
+    only = {c.strip() for c in args.clips.split(",") if c.strip()}
     vdir = lae.video_dir(args.video_dir)
     lut = (lae.ROOT / args.lut).resolve() if not Path(args.lut).is_absolute() else Path(args.lut)
     if not lut.is_file():
@@ -59,6 +61,8 @@ def main() -> None:
     outdir = vdir / "trabalho" / "proxies"
     outdir.mkdir(parents=True, exist_ok=True)
     for src in lae.source_clips(vdir):
+        if only and not any(f"_{c}_" in src.name for c in only):
+            continue
         dst = outdir / f"{src.stem}_proxy.mp4"
         if dst.exists():
             print(f"skip {dst.name} (exists)")

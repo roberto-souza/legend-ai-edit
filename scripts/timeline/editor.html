@@ -166,11 +166,13 @@ function tc(fr) {
   const f = fr % Math.round(FPS), s = Math.floor(fr / FPS);
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}:${String(f).padStart(2, "0")}`;
 }
-function starts() { const out = []; let pos = 0; for (const p of pieces) { out.push(pos); pos += p.out_frame - p.in_frame; } return out; }
-function total() { return pieces.reduce((a, p) => a + p.out_frame - p.in_frame, 0); }
+const spd = (p) => (p.broll && p.velocidade > 1 ? p.velocidade : 1);
+const plen = (p) => Math.max(1, Math.ceil((p.out_frame - p.in_frame) / spd(p)));
+function starts() { const out = []; let pos = 0; for (const p of pieces) { out.push(pos); pos += plen(p); } return out; }
+function total() { return pieces.reduce((a, p) => a + plen(p), 0); }
 function pieceAt(t) {
   const st = starts();
-  for (let i = 0; i < pieces.length; i++) if (t < st[i] + pieces[i].out_frame - pieces[i].in_frame) return i;
+  for (let i = 0; i < pieces.length; i++) if (t < st[i] + plen(pieces[i])) return i;
   return pieces.length - 1;
 }
 function textOf(p) {
@@ -180,7 +182,7 @@ function textOf(p) {
 function apoioAt(a) { const st = starts(), i = pieces.findIndex((p) => p.id === a.piece); return i < 0 ? null : st[i] + a.offset; }
 function anchor(name) {
   // same anchors as scripts/finish.py
-  const st = starts(), end = (i) => st[i] + pieces[i].out_frame - pieces[i].in_frame;
+  const st = starts(), end = (i) => st[i] + plen(pieces[i]);
   if (name === "inicio") return 0;
   if (name === "fim") return total();
   if (name === "efeito") { const i = pieces.findIndex((p) => p.efeito); return i < 0 ? null : st[i]; }
@@ -210,10 +212,10 @@ async function load(name = "") {
   nextId = 1;
   pieces = P.pieces.map((p) => ({ id: nextId++, span: p.span ?? null, clip: p.clip, vertical: !!p.vertical,
     broll: !!p.broll, efeito: !!p.efeito, in_frame: p.in_frame, out_frame: p.out_frame, zoom: p.zoom ?? 1, rotulo: p.rotulo || "",
-    zoom_fim: p.zoom_fim ?? null, transicao: p.transicao || "", titulo: p.titulo || "", nome: p.nome || "" }));
+    zoom_fim: p.zoom_fim ?? null, velocidade: p.velocidade || 1, transicao: p.transicao || "", titulo: p.titulo || "", nome: p.nome || "" }));
   const st = starts();
   apoio = P.apoio.map((a) => {
-    let i = st.findIndex((s, k) => a.at_frame >= s && a.at_frame < s + pieces[k].out_frame - pieces[k].in_frame);
+    let i = st.findIndex((s, k) => a.at_frame >= s && a.at_frame < s + plen(pieces[k]));
     if (i < 0) i = 0;
     return { id: nextId++, clip: a.clip, piece: pieces[i].id, offset: a.at_frame - st[i], frames: a.frames };
   });
@@ -262,12 +264,12 @@ function render() {
   // video track
   const tv = $("tVid"); tv.innerHTML = "";
   pieces.forEach((p, i) => {
-    const b = document.createElement("div"), len = p.out_frame - p.in_frame;
+    const b = document.createElement("div"), len = plen(p);
     b.className = "blk" + (p.broll ? " broll" : "") + (sel?.type === "piece" && sel.id === p.id ? " sel" : "");
     b.style.left = (st[i] * k) + "px"; b.style.width = Math.max(3, len * k - 1) + "px";
     b.style.background = p.efeito ? `linear-gradient(90deg, hsl(${hue(p.clip)} 0% 70%), hsl(${hue(p.clip)} 0% 55%))` : color(p.clip);
     const flags = [p.zoom > 1 ? p.zoom.toFixed(2) + "×" : "", p.vertical ? "▯" : "", p.broll ? "sem som" : "", p.efeito ? "glitch P&B" : "", p.rotulo ? "“" + p.rotulo + "”" : "", p.zoom_fim ? "↗" + p.zoom_fim.toFixed(2) : "", p.transicao ? "⇥" + p.transicao : "",
-      p.titulo ? "T" : "", p.nome ? "N" : ""].filter(Boolean).join(" · ");
+      p.titulo ? "T" : "", p.nome ? "N" : "", spd(p) > 1 ? "⏩" + spd(p) + "×" : ""].filter(Boolean).join(" · ");
     b.innerHTML = `<div class="t1">${clipNo(p.clip)} <span style="font-weight:400">${(len / FPS).toFixed(1)}s</span></div>` +
       `<div class="t2">${p.broll ? "[b-roll]" : (textOf(p) || "—")}</div>` + (flags ? `<span class="badge">${flags}</span>` : "") +
       `<div class="h l"></div><div class="h r"></div>`;
@@ -291,7 +293,7 @@ function render() {
   const cfg = P.config;
   for (const m of cfg.musica || []) {
     const i = pieces.findIndex((p) => p.broll); if (i < 0) continue;
-    let j = i, len = 0; while (j < pieces.length && pieces[j].broll) { len += pieces[j].out_frame - pieces[j].in_frame; j++; }
+    let j = i, len = 0; while (j < pieces.length && pieces[j].broll) { len += plen(pieces[j]); j++; }
     const b = document.createElement("div"); b.className = "blk aud";
     b.style.left = (st[i] * k) + "px"; b.style.width = ((len + (m.fade_out_s ?? 1.5) * FPS) * k) + "px";
     b.innerHTML = `<div class="t1">♪ ${m.arquivo.split("/").pop().replace(/^es_|\.mp3$/g, "")}</div>`;
@@ -334,11 +336,11 @@ function blockDown(e, p, i) {
     const d = Math.round((ev.clientX - x0) / k);
     if (Math.abs(ev.clientX - x0) > 3) moved = true;
     if (mode === "l") { p.in_frame = Math.min(Math.max(0, orig.a + d), p.out_frame - 2); render(); seek(starts()[i]); }
-    else if (mode === "r") { p.out_frame = Math.max(Math.min(max, orig.b + d), p.in_frame + 2); render(); seek(starts()[i] + p.out_frame - p.in_frame - 1); }
+    else if (mode === "r") { p.out_frame = Math.max(Math.min(max, orig.b + d), p.in_frame + 2); render(); seek(starts()[i] + plen(p) - 1); }
     else if (moved) {
       const st = starts(), x = (ev.clientX - $("tVid").getBoundingClientRect().left) / k;
       target = pieces.length;
-      for (let j = 0; j < pieces.length; j++) if (x < st[j] + (pieces[j].out_frame - pieces[j].in_frame) / 2) { target = j; break; }
+      for (let j = 0; j < pieces.length; j++) if (x < st[j] + plen(pieces[j]) / 2) { target = j; break; }
       const dp = $("drop"), ref = target < pieces.length ? st[target] : total();
       dp.style.display = "block"; dp.style.left = (LEAD + ref * k - 1) + "px"; dp.style.top = "74px"; dp.style.height = "84px";
     }
@@ -398,9 +400,10 @@ function inspector() {
       <div class="field"><label>Arquivo</label>${p.clip}</div>
       <div class="row"><div class="field"><label>Entrada (quadro)</label><input id="iIn" type="number" min="0" max="${max}" value="${p.in_frame}"></div>
       <div class="field"><label>Saída (quadro)</label><input id="iOut" type="number" min="0" max="${max}" value="${p.out_frame}"></div></div>
-      <div class="field"><label>Entrada · saída · duração</label>${tc(p.in_frame)} · ${tc(p.out_frame)} · ${((p.out_frame - p.in_frame) / FPS).toFixed(2)} s</div>
+      <div class="field"><label>Entrada · saída · duração</label>${tc(p.in_frame)} · ${tc(p.out_frame)} · ${(plen(p) / FPS).toFixed(2)} s na linha do tempo${spd(p) > 1 ? ` (${spd(p)}× de ${((p.out_frame - p.in_frame) / FPS).toFixed(1)} s)` : ""}</div>
       <div class="field"><label>Zoom</label><select id="iZoom">${[1, 1.06, 1.1, 1.12, 1.15].map((z) => `<option value="${z}" ${Math.abs(p.zoom - z) < 1e-3 ? "selected" : ""}>${z === 1 ? "sem zoom" : z.toFixed(2) + "×"}</option>`).join("")}</select></div>
       <label class="check"><input id="iBroll" type="checkbox" ${p.broll ? "checked" : ""}> Sem som (b-roll, a música cobre)</label>
+      <div class="field" style="margin-top:6px"><label>Velocidade (só b-roll: timelapse)</label><select id="iSpd" ${p.broll ? "" : "disabled"}>${[1, 2, 4, 8, 16, 24, 40, 60].map((v) => `<option value="${v}" ${spd(p) === v ? "selected" : ""}>${v === 1 ? "normal" : v + "×"}</option>`).join("")}</select></div>
       <label class="check"><input id="iFx" type="checkbox" ${p.efeito ? "checked" : ""}> Glitch + preto e branco</label>
       <div class="field" style="margin-top:8px"><label>Texto na tela (amarelo, canto de cima)</label><input id="iLbl" type="text" maxlength="80" value="${(p.rotulo || "").replace(/"/g, "&quot;")}" placeholder="ex.: TENTATIVA 2" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
       <div class="row"><div class="field"><label>Zoom final (avanço suave)</label><select id="iZf">${[["", "sem avanço"], ...[0.03, 0.05, 0.08].map((d) => [(p.zoom + d).toFixed(2), "+" + d.toFixed(2) + "×"])].map(([v, t]) => `<option value="${v}" ${(p.zoom_fim ? p.zoom_fim.toFixed(2) : "") === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
@@ -415,6 +418,7 @@ function inspector() {
     $("iZoom").onchange = (e) => upd(() => { p.zoom = +e.target.value; });
     $("iBroll").onchange = (e) => upd(() => { p.broll = e.target.checked; });
     $("iFx").onchange = (e) => upd(() => { p.efeito = e.target.checked; });
+    $("iSpd").onchange = (e) => upd(() => { p.velocidade = +e.target.value; });
     $("iLbl").onchange = (e) => upd(() => { p.rotulo = e.target.value.trim(); });
     $("iZf").onchange = (e) => upd(() => { p.zoom_fim = e.target.value ? +e.target.value : null; });
     $("iTr").onchange = (e) => upd(() => { p.transicao = e.target.value; });
@@ -464,9 +468,10 @@ function styleVideo(v, p) {
   v.style.transform = p.zoom > 1 ? `scale(${p.zoom})` : "";
   v.style.filter = p.efeito ? "grayscale(1)" : "";
   v.muted = !!p.broll;
+  v.playbackRate = Math.min(spd(p), 16); // browsers cap at 16x: a 40x timelapse previews slower than it renders
 }
 function loadInto(v, i, offset) {
-  const p = pieces[i], url = P.clips[p.clip].url, t = (p.in_frame + offset) / FPS + 0.001;
+  const p = pieces[i], url = P.clips[p.clip].url, t = (p.in_frame + offset * spd(p)) / FPS + 0.001;
   if (!v.src.endsWith(url)) v.src = url;
   const go = () => { v.currentTime = t; };
   if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true });
@@ -499,7 +504,7 @@ function overlays() {
   // music under the b-roll run
   const aM = $("aM"), m = P.config.musica?.[0], i = pieces.findIndex((p) => p.broll);
   if (m && i >= 0) {
-    let j = i, len = 0; while (j < pieces.length && pieces[j].broll) { len += pieces[j].out_frame - pieces[j].in_frame; j++; }
+    let j = i, len = 0; while (j < pieces.length && pieces[j].broll) { len += plen(pieces[j]); j++; }
     const a = starts()[i], b = a + len + (m.fade_out_s ?? 1.5) * FPS;
     if (playing && T >= a && T < b) {
       const want = (m.inicio_faixa_s || 0) + (T - a) / FPS;
@@ -530,7 +535,7 @@ function stop() {
 function tick() {
   if (!playing) return;
   const p = pieces[curIdx], st = starts()[curIdx];
-  const cur = active.currentTime * FPS - p.in_frame;
+  const cur = (active.currentTime * FPS - p.in_frame) / spd(p);
   T = st + Math.max(0, cur);
   if (active.currentTime * FPS >= p.out_frame - 0.5 || active.ended) {
     if (curIdx + 1 >= pieces.length) { stop(); T = total() - 1; placePlayhead(); return; }
@@ -580,7 +585,8 @@ async function save() {
   const body = {
     based_on: loadedFrom,
     pieces: pieces.map(({ id, ...p }) => ({ ...p, efeito: p.efeito ? "glitch_pb" : undefined, rotulo: p.rotulo || undefined,
-      titulo: p.titulo || undefined, nome: p.nome || undefined, transicao: p.transicao || undefined, zoom_fim: p.zoom_fim || undefined })),
+      titulo: p.titulo || undefined, nome: p.nome || undefined, transicao: p.transicao || undefined, zoom_fim: p.zoom_fim || undefined,
+      velocidade: p.velocidade > 1 ? p.velocidade : undefined })),
     apoio: apoio.map((a) => ({ clip: a.clip, at_frame: apoioAt(a), frames: a.frames })).filter((a) => a.at_frame !== null),
   };
   const r = await fetch("/api/save", { method: "POST", body: JSON.stringify(body) });
