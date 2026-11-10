@@ -88,11 +88,12 @@ def validate(body: dict, clips: dict) -> list[dict]:
         pieces.append({"span": p.get("span"), "clip": p["clip"], "vertical": info["height"] > info["width"],
                        "in_frame": a, "out_frame": b, "zoom": float(p.get("zoom", 1.0)),
                        **({"broll": True} if p.get("broll") else {}),
+                       **({"som": True} if p.get("broll") and p.get("som") else {}),
                        **({"efeito": "glitch_pb"} if p.get("efeito") else {}),
                        **({"rotulo": str(p["rotulo"])[:80]} if p.get("rotulo") else {}),
                        **({"titulo": str(p["titulo"])[:80]} if p.get("titulo") else {}),
                        **({"nome": str(p["nome"])[:80]} if p.get("nome") else {}),
-                       **({"transicao": p["transicao"]} if p.get("transicao") in ("flash", "punch", "fade") else {}),
+                       **({"transicao": p["transicao"]} if p.get("transicao") in ("flash", "punch", "fade", "dissolve") else {}),
                        **({"zoom_fim": float(p["zoom_fim"])} if p.get("zoom_fim") else {}),
                        **({"velocidade": float(p["velocidade"])} if p.get("broll") and float(p.get("velocidade") or 1) > 1 else {})})
     return pieces

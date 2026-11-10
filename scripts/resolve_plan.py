@@ -12,6 +12,8 @@ Plan lines (anything else in the file is ignored):
 - `- efeito glitch_pb desde "<words>"`: from those words (inside the previous span) to the end of
   that span, a glitch hit and then black and white.
 - `- broll <clip> <seconds>s`: picture-only shot (no sound) taken from the middle of the clip.
+  `- broll <clip> <seconds>s desde <t>s` starts at second t of the clip instead of the middle.
+  `... com som` keeps the clip's own sound (dance, applause, ambience), levelled like speech.
 
 Writes <plan>.resolvido.json next to the plan (never overwrites) and prints each span.
 """
@@ -29,7 +31,7 @@ import lae
 LINE = re.compile(r'^\s*-\s*(\d{4})(?:@(\d+))?\s+"(.+)"\s*(\+fim)?\s*$')
 INSERT = re.compile(r'^\s*-\s*apoio\s+(\d{4})\b')
 EFFECT = re.compile(r'^\s*-\s*efeito\s+(glitch_pb)\s+desde\s+"(.+)"\s*$')
-BROLL = re.compile(r'^\s*-\s*broll\s+(\d{4})\s+([\d.,]+)s\b')
+BROLL = re.compile(r'^\s*-\s*broll\s+(\d{4})\s+([\d.,]+)s(?:\s+desde\s+([\d.,]+)s)?(\s+com\s+som)?\b')
 PAD_IN = Fraction("0.08")    # seconds before the first word
 PAD_OUT = Fraction("0.15")   # seconds after the last word
 MIN_WORD = Fraction("0.10")  # duration given to words whisper returned with start == end
@@ -105,8 +107,11 @@ def main() -> None:
             want = lae.seconds_to_frame(m.group(2).replace(",", "."), rate)
             length = min(want, info["frames"])
             f_in = (info["frames"] - length) // 2
+            if m.group(3):
+                f_in = min(lae.seconds_to_frame(m.group(3).replace(",", "."), rate), info["frames"] - length)
             spans.append({
                 "clip": info["file"], "broll": True, "text": "", "to_end": False,
+                **({"som": True} if m.group(4) else {}),
                 "in_s": round(float(lae.frame_to_seconds(f_in, rate)), 3),
                 "out_s": round(float(lae.frame_to_seconds(f_in + length, rate)), 3),
                 "in_frame": f_in, "out_frame": f_in + length, "frames": length, "rate": info["rate"],
@@ -146,7 +151,7 @@ def main() -> None:
                                   indent=2, ensure_ascii=False) + "\n")
     for s in spans:
         dur = s["frames"] / float(lae.parse_rate(s["rate"]))
-        label = "[b-roll, sem som]" if s.get("broll") else s["text"][:60]
+        label = ("[b-roll, com som]" if s.get("som") else "[b-roll, sem som]") if s.get("broll") else s["text"][:60]
         flag = f"  low: {s['low_confidence']}" if s["low_confidence"] else ""
         print(f"{s['clip'].split('_')[2]} {s['in_s']:7.2f}-{s['out_s']:7.2f} {dur:5.1f}s  {label}{flag}")
         for a in s.get("apoio", []):
