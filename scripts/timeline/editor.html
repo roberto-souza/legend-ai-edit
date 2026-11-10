@@ -211,7 +211,7 @@ async function load(name = "") {
   const [n, d] = P.rate.split("/").map(Number); FPS = n / (d || 1);
   nextId = 1;
   pieces = P.pieces.map((p) => ({ id: nextId++, span: p.span ?? null, clip: p.clip, vertical: !!p.vertical,
-    broll: !!p.broll, efeito: !!p.efeito, in_frame: p.in_frame, out_frame: p.out_frame, zoom: p.zoom ?? 1, rotulo: p.rotulo || "",
+    broll: !!p.broll, som: !!p.som, efeito: !!p.efeito, in_frame: p.in_frame, out_frame: p.out_frame, zoom: p.zoom ?? 1, rotulo: p.rotulo || "",
     zoom_fim: p.zoom_fim ?? null, velocidade: p.velocidade || 1, transicao: p.transicao || "", titulo: p.titulo || "", nome: p.nome || "" }));
   const st = starts();
   apoio = P.apoio.map((a) => {
@@ -268,7 +268,7 @@ function render() {
     b.className = "blk" + (p.broll ? " broll" : "") + (sel?.type === "piece" && sel.id === p.id ? " sel" : "");
     b.style.left = (st[i] * k) + "px"; b.style.width = Math.max(3, len * k - 1) + "px";
     b.style.background = p.efeito ? `linear-gradient(90deg, hsl(${hue(p.clip)} 0% 70%), hsl(${hue(p.clip)} 0% 55%))` : color(p.clip);
-    const flags = [p.zoom > 1 ? p.zoom.toFixed(2) + "×" : "", p.vertical ? "▯" : "", p.broll ? "sem som" : "", p.efeito ? "glitch P&B" : "", p.rotulo ? "“" + p.rotulo + "”" : "", p.zoom_fim ? "↗" + p.zoom_fim.toFixed(2) : "", p.transicao ? "⇥" + p.transicao : "",
+    const flags = [p.zoom > 1 ? p.zoom.toFixed(2) + "×" : "", p.vertical ? "▯" : "", p.broll ? (p.som ? "b-roll com som" : "sem som") : "", p.efeito ? "glitch P&B" : "", p.rotulo ? "“" + p.rotulo + "”" : "", p.zoom_fim ? "↗" + p.zoom_fim.toFixed(2) : "", p.transicao ? "⇥" + p.transicao : "",
       p.titulo ? "T" : "", p.nome ? "N" : "", spd(p) > 1 ? "⏩" + spd(p) + "×" : ""].filter(Boolean).join(" · ");
     b.innerHTML = `<div class="t1">${clipNo(p.clip)} <span style="font-weight:400">${(len / FPS).toFixed(1)}s</span></div>` +
       `<div class="t2">${p.broll ? "[b-roll]" : (textOf(p) || "—")}</div>` + (flags ? `<span class="badge">${flags}</span>` : "") +
@@ -407,7 +407,7 @@ function inspector() {
       <label class="check"><input id="iFx" type="checkbox" ${p.efeito ? "checked" : ""}> Glitch + preto e branco</label>
       <div class="field" style="margin-top:8px"><label>Texto na tela (amarelo, canto de cima)</label><input id="iLbl" type="text" maxlength="80" value="${(p.rotulo || "").replace(/"/g, "&quot;")}" placeholder="ex.: TENTATIVA 2" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
       <div class="row"><div class="field"><label>Zoom final (avanço suave)</label><select id="iZf">${[["", "sem avanço"], ...[0.03, 0.05, 0.08].map((d) => [(p.zoom + d).toFixed(2), "+" + d.toFixed(2) + "×"])].map(([v, t]) => `<option value="${v}" ${(p.zoom_fim ? p.zoom_fim.toFixed(2) : "") === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
-      <div class="field"><label>Transição de entrada</label><select id="iTr">${[["", "corte seco"], ["flash", "flash"], ["punch", "punch-in"], ["fade", "fade"]].map(([v, t]) => `<option value="${v}" ${p.transicao === v ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
+      <div class="field"><label>Transição de entrada</label><select id="iTr">${[["", "corte seco"], ["flash", "flash"], ["punch", "punch-in"], ["fade", "fade"], ["dissolve", "dissolver"]].map(([v, t]) => `<option value="${v}" ${p.transicao === v ? "selected" : ""}>${t}</option>`).join("")}</select></div></div>
       <div class="field"><label>Título (centro, com pop)</label><input id="iTit" type="text" maxlength="80" value="${(p.titulo || "").replace(/"/g, "&quot;")}" placeholder="ex.: TARDE DE GRAVAÇÃO" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
       <div class="field"><label>Nome na tela (embaixo, desliza)</label><input id="iNome" type="text" maxlength="80" value="${(p.nome || "").replace(/"/g, "&quot;")}" placeholder="ex.: Gui | Social media" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px"></div>
       <div class="field" style="margin-top:10px"><label>Fala neste corte</label><div class="quote">${textOf(p) || "<i>sem fala</i>"}</div></div>
@@ -467,7 +467,7 @@ function trimTo(side) {
 function styleVideo(v, p) {
   v.style.transform = p.zoom > 1 ? `scale(${p.zoom})` : "";
   v.style.filter = p.efeito ? "grayscale(1)" : "";
-  v.muted = !!p.broll;
+  v.muted = !!p.broll && !p.som;
   v.playbackRate = Math.min(spd(p), 16); // browsers cap at 16x: a 40x timelapse previews slower than it renders
 }
 function loadInto(v, i, offset) {

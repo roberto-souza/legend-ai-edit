@@ -7,7 +7,7 @@ As animações ficam em `motion/<modelo>/`, um projeto do HyperFrames por modelo
   - `titulo`: título de bloco no alto, à esquerda, com o selo de `titulo_selo`;
   - `nome`: nome na tela embaixo, à esquerda, acima da legenda. No campo `nome` do corte, use "Nome | função".
 
-  Os dois aparecem no inspetor do editor. Sem o HyperFrames instalado, o título vira texto simples no alto.
+  Os dois aparecem no inspetor do editor. Cada canal pode ter variantes com a própria marca (`motion/titulo-<canal>`, `motion/nome-<canal>`), escolhidas por `modelo_titulo` e `modelo_nome` na configuração de acabamento. Elas ficam fora do git (`motion/*-*/` no `.gitignore`), junto com o logo que usarem. Sem o HyperFrames instalado, o título vira texto simples no alto.
 - **Modelo novo:** copie `motion/titulo/` e declare as variáveis em `data-composition-variables`. Duração `(N − 0,5) / fps`. Depois:
   1. rode `npx hyperframes check` dentro da pasta até não sobrar erro (o aviso de primeiro quadro vazio é esperado);
   2. renderize um teste com `scripts/motion.py` e confira os quadros.

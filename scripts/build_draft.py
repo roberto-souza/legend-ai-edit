@@ -156,7 +156,8 @@ def main() -> None:
         info = inventory[span["clip"]]
         base = {"span": idx, "clip": span["clip"], "vertical": info["height"] > info["width"]}
         if span.get("broll"):
-            pieces.append({**base, "broll": True, "in_frame": span["in_frame"], "out_frame": span["out_frame"]})
+            pieces.append({**base, "broll": True, "in_frame": span["in_frame"], "out_frame": span["out_frame"],
+                           **({"som": True} if span.get("som") else {})})
             pos += span["out_frame"] - span["in_frame"]
             continue
         proxy = proxies / (Path(span["clip"]).stem + "_proxy.mp4")
@@ -192,7 +193,7 @@ def main() -> None:
         dur = float(lae.frame_to_seconds(b - a, rate))
         fx = f",{glitch_pb_filter()}" if p.get("efeito") == "glitch_pb" else ""
         graph.append(f"[{k}:v]trim=start_frame={a}:end_frame={b},setpts=PTS-STARTPTS,{fit_filter(p['vertical'], f'p{k}')}{fx}[v{k}]")
-        if p.get("broll"):
+        if p.get("broll") and not p.get("som"):
             graph.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=end_sample={s1 - s0}[a{k}]")
         else:
             graph.append(f"[{k}:a]aresample={SAMPLE_RATE},atrim=start_sample={s0}:end_sample={s1},asetpts=PTS-STARTPTS,"

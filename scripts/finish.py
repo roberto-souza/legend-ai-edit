@@ -10,6 +10,11 @@ anchors instead of hand-written times:
 
     {
       "zoom_max": 1.12,                       # punch-in on jump cuts (style ceiling: 1.15)
+      "modelo_titulo": "titulo-canal",        # optional channel variant motion/titulo-<canal> (default motion/titulo)
+      "modelo_nome": "nome-canal",            # optional channel variant motion/nome-<canal> (default motion/nome)
+      "broll_som_db": -10,
+      "dissolve_s": 0.4,                      # length of a "transicao": "dissolve" cross-fade
+      "fade_saida_s": 2.0,                    # fade to black (picture and sound) at the end                    # b-roll "com som": offset from the voice level (it never ducks the bed)
       "legenda": true,
       "loudnorm_lufs": -14,
       "musica": [{"arquivo": "assets/x.mp3", "sob": "broll", "inicio_faixa_s": 9.6,
@@ -46,12 +51,13 @@ import lae
 import motion
 from build_draft import GLITCH_FRAMES, SAMPLE_RATE, FADE, glitch_pb_filter, next_version
 
+SOFT_FADE = 0.08   # seconds, edge of b-roll pieces that keep their own sound
 MAX_WORDS = 4          # words per caption
 MAX_CAPTION_S = 1.8
 CAPTION_GAP_S = 0.35   # a pause this long starts a new caption
 # a caption should not end on a word that leans on the next one
 LEANING = {"a", "o", "as", "os", "de", "do", "da", "dos", "das", "e", "que", "um", "uma", "no", "na",
-           "em", "pra", "para", "por", "com", "se", "eu", "tu", "você", "ao", "à", "nos", "nas"}
+           "em", "pra", "para", "por", "com", "se", "eu", "tu", "você", "ao", "à", "nos", "nas", "me", "te", "ou", "mas"}
 
 
 def fit(vertical: bool, w: int, h: int, tag: str, zoom: float, zoom_end: float | None = None, frames: int = 1) -> str:
@@ -99,7 +105,7 @@ def assign_voice_gain(pieces: list[dict], rate: Fraction, source) -> None:
     per_clip: dict[str, list[float]] = {}
     for p in pieces:
         p["voice_gain_db"] = 0.0
-        if p.get("broll"):
+        if p.get("broll") and not p.get("som"):   # b-roll "com som" is levelled like speech
             continue
         a = float(lae.frame_to_seconds(p["in_frame"], rate))
         d = float(lae.frame_to_seconds(p["out_frame"] - p["in_frame"], rate))
@@ -107,7 +113,7 @@ def assign_voice_gain(pieces: list[dict], rate: Fraction, source) -> None:
         if p["_lufs"] is not None:
             per_clip.setdefault(p["clip"], []).append(p["_lufs"])
     for p in pieces:
-        if p.get("broll"):
+        if p.get("broll") and not p.get("som"):
             continue
         level = p.pop("_lufs", None)
         if level is None and per_clip.get(p["clip"]):
@@ -132,7 +138,7 @@ def assign_zoom(pieces: list[dict], zoom_max: float) -> None:
 def speed(p: dict) -> float:
     """Playback speed of a piece: only b-roll can be sped up (timelapse); speech always plays at 1x."""
     v = float(p.get("velocidade") or 1)
-    return v if p.get("broll") and v > 1 else 1.0
+    return v if p.get("broll") and not p.get("som") and v > 1 else 1.0   # sound never plays sped up
 
 
 def tl_length(p: dict) -> int:
@@ -256,7 +262,7 @@ def assign_words(vdir: Path, pieces, rate: Fraction, spans: list[dict]) -> dict[
             home = next((k for k, t0, t1 in windows if t0 <= start < t1 - Fraction("0.12")), None)
             if home is None:  # started just before a border, still heard after it
                 home = next((k for k, t0, t1 in sorted(windows, key=lambda w: w[1])
-                             if t0 > start and end > t0 + Fraction("0.08") and t0 - start < Fraction("0.6")), None)
+                             if t0 > start and end > t0 + Fraction("0.08") and t0 - start < Fraction("1.5")), None)
             if home is not None:
                 out[home].append((si, x))
     return out
@@ -386,7 +392,9 @@ def normalize_loudness(src: Path, dst: Path, lufs: float) -> None:
                          capture_output=True, text=True, check=True).stderr
     m = json.loads(log[log.rindex("{"):log.rindex("}") + 1])
     gain = lufs - float(m["input_i"])
-    af = f"volume={gain:.2f}dB,alimiter=limit=0.891:level=false:attack=5:release=50,aresample={SAMPLE_RATE}"
+    # limit at 4x sample rate (catches inter-sample peaks) and 0.5 dB below -1 dBTP for the AAC overshoot
+    af = (f"volume={gain:.2f}dB,aresample={SAMPLE_RATE * 4},alimiter=limit=0.841:level=false:attack=5:release=50,"
+          f"aresample={SAMPLE_RATE}")
     subprocess.run([lae.FFMPEG, "-hide_banner", "-loglevel", "error", "-i", str(src), "-map", "0:v", "-map", "0:a",
                     "-c:v", "copy", "-af", af, "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart", str(dst)],
                    check=True)
@@ -446,7 +454,8 @@ def main() -> None:
     out = vdir / "final" / f"{stem}.mp4"
 
     cmd = [lae.FFMPEG, "-hide_banner", "-loglevel", "error", "-stats"]
-    graph, labels, n_in = [], [], 0
+    graph, labels, keys, exts, n_in = [], [], [], [], 0
+    dissolve = lae.seconds_to_frame(str(cfg.get("dissolve_s", 0.4)), rate)
     for k, p in enumerate(pieces):
         seek = max(0, p["in_frame"] - 30)
         hw = ["-hwaccel", "videotoolbox"] if final else []
@@ -458,23 +467,62 @@ def main() -> None:
         fx = f",{glitch_pb_filter(w // 1920)}" if p.get("efeito") == "glitch_pb" else ""
         rgb = "format=rgb48le," if final else ""
         n_out = tl_length(p)
+        # dissolve into the next piece: this piece runs DISSOLVE frames longer and the two overlap
+        nxt = pieces[k + 1] if k + 1 < len(pieces) else None
+        ext = dissolve if (nxt is not None and nxt.get("transicao") == "dissolve" and speed(p) == 1
+                           and p["out_frame"] + dissolve <= inventory[p["clip"]]["frames"]) else 0
+        exts.append(ext)
         # timelapse: speed up and drop frames back to the timeline rate *before* the LUT and scaling,
         # so only the frames that stay get processed
         fast = (f",setpts=(PTS-STARTPTS)/{speed(p)},fps={rate.numerator}/{rate.denominator},trim=end_frame={n_out}"
                 if speed(p) > 1 else "")
-        graph.append(f"[{k}:v]trim=start_frame={a}:end_frame={b},setpts=PTS-STARTPTS{fast},{rgb}{color}"
-                     f"{fit(p['vertical'], w, h, f'p{k}', p['zoom'], p.get('zoom_fim'), n_out)}"
-                     f"{transition_filter(p.get('transicao'), w, h)}{fx}[v{k}]")
-        if p.get("broll"):
-            silent = round(lae.frame_to_seconds(n_out, rate) * SAMPLE_RATE)
+        graph.append(f"[{k}:v]trim=start_frame={a}:end_frame={b + ext},setpts=PTS-STARTPTS{fast},{rgb}{color}"
+                     f"{fit(p['vertical'], w, h, f'p{k}', p['zoom'], p.get('zoom_fim'), n_out + ext)}"
+                     f"{transition_filter(p.get('transicao'), w, h)}{fx},settb=AVTB[v{k}]")
+        silent = round(lae.frame_to_seconds(n_out, rate) * SAMPLE_RATE)
+        if p.get("broll") and not p.get("som"):
             graph.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=end_sample={silent}[a{k}]")
         else:
+            # b-roll "com som" (dance, ambience) sits broll_som_db below the voice level
+            gain = p["voice_gain_db"] + (float(cfg.get("broll_som_db", 0)) if p.get("broll") else 0.0)
+            fa = SOFT_FADE if p.get("som") else FADE   # dance sound: a softer edge than speech
             graph.append(f"[{k}:a]aresample={SAMPLE_RATE},atrim=start_sample={s0}:end_sample={s1},asetpts=PTS-STARTPTS,"
-                         f"afade=t=in:d={FADE},afade=t=out:st={max(0.0, dur - FADE):.4f}:d={FADE},"
-                         f"volume={p['voice_gain_db']}dB[a{k}]")
-        labels.append(f"[v{k}][a{k}]")
+                         f"afade=t=in:d={fa},afade=t=out:st={max(0.0, dur - fa):.4f}:d={fa},"
+                         f"volume={gain:.2f}dB[a{k}]")
+        # ducking key: only speech pushes the background track down, never b-roll sound
+        if p.get("broll"):
+            graph.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=end_sample={silent}[ak{k}]")
+        else:
+            graph[-1] = graph[-1][:-len(f"[a{k}]")] + f",asplit=2[a{k}][ak{k}]"
+        labels.append(f"[a{k}]")
+        keys.append(f"[ak{k}]")
         n_in += 1
-    graph.append(f"{''.join(labels)}concat=n={len(pieces)}:v=1:a=1[vcat][voice]")
+    graph.append(f"{''.join(labels)}concat=n={len(pieces)}:v=0:a=1[voice]")
+    # picture: hard cuts are one concat; a "dissolve" piece cross-fades from the previous run
+    runs, cur = [], [0]
+    for k in range(1, len(pieces)):
+        if exts[k - 1]:
+            runs.append(cur)
+            cur = [k]
+        else:
+            cur.append(k)
+    runs.append(cur)
+    run_len = []
+    for r_i, run in enumerate(runs):
+        n = sum(tl_length(pieces[k]) for k in run) + exts[run[-1]]
+        run_len.append(n)
+        if len(run) == 1:
+            graph.append(f"[v{run[0]}]null[run{r_i}]")
+        else:
+            graph.append(f"{''.join(f'[v{k}]' for k in run)}concat=n={len(run)}:v=1:a=0,settb=AVTB[run{r_i}]")
+    acc, acc_len = "run0", run_len[0]
+    for r_i in range(1, len(runs)):
+        offset = float(lae.frame_to_seconds(acc_len - dissolve, rate))
+        graph.append(f"[{acc}][run{r_i}]xfade=transition=fade:duration={float(lae.frame_to_seconds(dissolve, rate)):.4f}:"
+                     f"offset={offset:.4f}[xf{r_i}]")
+        acc, acc_len = f"xf{r_i}", acc_len - dissolve + run_len[r_i]
+    graph.append(f"[{acc}]null[vcat]")
+    graph.append(f"{''.join(keys)}concat=n={len(pieces)}:v=0:a=1[voicekey]")
 
     last = "vcat"
     for j, o in enumerate(edl.get("apoio", [])):
@@ -489,38 +537,43 @@ def main() -> None:
         n_in += 1
 
     # titles and names: HyperFrames overlays (motion/titulo, motion/nome) when installed; plain text otherwise
-    use_motion = motion.available("titulo")
-    use_motion_name = motion.available("nome")
+    # "modelo_titulo"/"modelo_nome" pick a channel variant (e.g. motion/titulo-<canal>, kept out of git); default: motion/titulo, motion/nome
+    tpl_title = cfg.get("modelo_titulo", "titulo")
+    tpl_name = cfg.get("modelo_nome", "nome")
+    use_motion = motion.available(tpl_title)
+    use_motion_name = motion.available(tpl_name)
     placed_motion = []
     for p, st_frame in zip(pieces, starts):
         jobs = []
         if p.get("titulo") and use_motion:
-            jobs.append(("titulo", {"titulo": p["titulo"], "selo": cfg.get("titulo_selo", "")}))
+            jobs.append(("titulo", tpl_title, {"titulo": p["titulo"], "selo": cfg.get("titulo_selo", "")}))
         if p.get("nome") and use_motion_name:
             parts = re.split(r"\s*[|·—]\s*|\s+-\s+", p["nome"].strip(), maxsplit=1)
             nome, funcao = parts[0], parts[1] if len(parts) > 1 else ""
-            jobs.append(("nome", {"nome": nome.strip(), "funcao": funcao.strip()}))
-        for template, variables in jobs:
+            jobs.append(("nome", tpl_name, {"nome": nome.strip(), "funcao": funcao.strip()}))
+        for kind, template, variables in jobs:
             mov = motion.render(vdir, template, variables, h)
             cmd += ["-i", str(mov)]
             offset = float(lae.frame_to_seconds(st_frame, rate))
             graph.append(f"[{n_in}:v]setpts=PTS-STARTPTS+{offset:.6f}/TB[mo{n_in}]")
             graph.append(f"[{last}][mo{n_in}]overlay=eof_action=pass:repeatlast=0:format=auto[vm{n_in}]")
             last = f"vm{n_in}"
-            placed_motion.append({template: variables, "arquivo": str(mov.relative_to(vdir)), "at_frame": st_frame})
+            placed_motion.append({kind: variables, "modelo": template, "arquivo": str(mov.relative_to(vdir)), "at_frame": st_frame})
             n_in += 1
 
+    fade_out = float(cfg.get("fade_saida_s", 0))   # picture and sound fade to black at the end
+    fade_out_v = f",fade=t=out:st={max(0.0, total_s - fade_out):.4f}:d={fade_out}" if fade_out else ""
     ass_path = vdir / "trabalho" / f"{stem}.ass"
     if cfg.get("legenda"):
         lae.write_new(ass_path, captions(vdir, pieces, starts, rate, w, h, plan["spans"], cfg.get("legenda_destaque"),
                                           ass_titles=not use_motion, ass_names=not use_motion_name))
         esc = str(ass_path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
-        graph.append(f"[{last}]subtitles=filename='{esc}',format=yuv420p[vout]")
+        graph.append(f"[{last}]subtitles=filename='{esc}'{fade_out_v},format=yuv420p[vout]")
     else:
-        graph.append(f"[{last}]format=yuv420p[vout]")
+        graph.append(f"[{last}]format=yuv420p{fade_out_v}[vout]")
 
     # audio: voice + background track (ducked under the voice) + music + sfx, then loudness
-    graph.append("[voice]asplit=2[voicemix][voicekey]")
+    graph.append("[voice]anull[voicemix]")
     mix, placed = ["[voicemix]"], []
     bed = cfg.get("trilha")
     if bed:
@@ -598,7 +651,8 @@ def main() -> None:
         n_in += 1
     lufs = cfg.get("loudnorm_lufs", -14)
     graph.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=first,"
-                 f"aresample={SAMPLE_RATE},atrim=duration={total_s:.4f}[aout]")
+                 f"aresample={SAMPLE_RATE},atrim=duration={total_s:.4f}"
+                 + (f",afade=t=out:st={max(0.0, total_s - fade_out):.4f}:d={fade_out}" if fade_out else "") + "[aout]")
 
     venc = (["-c:v", "hevc_videotoolbox", "-b:v", "45M", "-tag:v", "hvc1", "-profile:v", "main"] if final
             else ["-c:v", "h264_videotoolbox", "-b:v", "10M", "-profile:v", "high"])

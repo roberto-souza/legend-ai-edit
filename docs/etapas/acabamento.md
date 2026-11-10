@@ -27,11 +27,13 @@ Entrada: o EDL do rascunho aprovado (`trabalho/rascunho_vNN.edl.json`). Os corte
      - `sfx_rotulo`: som a cada número novo do contador;
      - `sfx_titulo`: som leve na entrada de cada título;
      - `titulo_selo`: texto pequeno acima do título;
-     - `nomes_proprios`: grafia fixa na legenda (ex.: `["Palanque", "CTG"]`).
+     - `nomes_proprios`: grafia fixa na legenda (ex.: `["Ana", "CTG"]`);
+     - `fade_saida_s`: fade para o preto, imagem e som, no fim do vídeo;
+     - `broll_som_db`: volume do b-roll com som em relação à voz; ele não abaixa a trilha.
    - **Por corte, na linha do tempo:**
      - `zoom_fim`: avanço suave até esse zoom;
      - `velocidade`: só em b-roll; acelera o trecho em timelapse (ex.: 40), e a duração na linha do tempo vira a duração acelerada;
-     - `transicao`: `flash`, `punch` ou `fade`;
+     - `transicao`: `flash`, `punch`, `fade` ou `dissolve` (fusão com o corte anterior, `dissolve_s` na configuração);
      - `titulo`: título animado do HyperFrames no alto (`docs/etapas/motion.md`);
      - `nome`: nome na tela, animado no HyperFrames (`motion/nome`), no formato "Nome | função";
    - Tudo isso aparece no inspetor do editor.
