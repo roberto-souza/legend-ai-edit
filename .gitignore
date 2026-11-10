@@ -19,3 +19,9 @@ node_modules/
 motion/out/
 motion/*/.hyperframes/
 motion/*/renders/
+# o que é de cada pessoa ou canal não vai para o repositório público:
+# estilos de canal (fica só o exemplo vlog.md) e variantes de motion de canal (motion/<modelo>-<canal>/)
+estilos/*
+!estilos/.gitkeep
+!estilos/vlog.md
+motion/*-*/

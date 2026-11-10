@@ -53,7 +53,7 @@ Regras para a sessão inteira:
    - idioma;
    - pessoas que costumam aparecer;
    - gostos já conhecidos (música, legenda).
-8. **Estilo.** Copie `estilos/palanque.md` para `estilos/<canal>.md` como ponto de partida. Explique que o estilo vai sendo ajustado a cada vídeo aprovado.
+8. **Estilo.** Copie o exemplo `estilos/vlog.md` para `estilos/<canal>.md` como ponto de partida (o estilo do canal fica fora do git). Explique que o estilo vai sendo ajustado a cada vídeo aprovado.
 9. **Epidemic Sound (opcional).** O `.mcp.json` já traz o servidor. Peça à pessoa para:
    - reabrir o Claude Code dentro de `~/Movies/legend-ai-edit`;
    - aprovar o servidor;

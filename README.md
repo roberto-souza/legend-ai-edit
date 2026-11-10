@@ -175,7 +175,7 @@ Os renders saem em ProRes 4444 com transparência e ficam em cache por texto. Ve
 ## 07 / Faça a oficina ser sua
 
 - **Câmera:** coloque o LUT da sua câmera (o `.cube` de log para Rec.709) em `luts/`. Se você não grava em log, use `"lut": "nenhum"` na configuração de acabamento.
-- **Estilo:** copie [`estilos/palanque.md`](estilos/palanque.md) para `estilos/<seu-canal>.md` e ajuste: tom, legenda, zoom, música, títulos. O Claude anota ali o que você aprovar.
+- **Estilo:** copie o exemplo [`estilos/vlog.md`](estilos/vlog.md) para `estilos/<seu-canal>.md` e ajuste: tom, legenda, zoom, música, títulos, identidade do canal. O Claude anota ali o que você aprovar. Os estilos de canal e as variantes de motion de canal (`motion/<modelo>-<canal>/`) ficam só na sua máquina (`.gitignore`).
 - **Música e efeitos sonoros:** o [`.mcp.json`](.mcp.json) já traz o servidor do Epidemic Sound. Abra o Claude Code na pasta, aprove o servidor e entre com `/mcp`. Cada pessoa usa a própria assinatura, e a licença de uso no seu canal é sua.
 - **Memória:** o Claude guarda em `.memoria/MEMORIA.md` o que aprende sobre você. Pode abrir e editar à vontade.
 
